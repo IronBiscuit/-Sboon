@@ -2,11 +2,11 @@
 <form action="/register" method="POST">
     <div>
         <label for="name">Name</label>
-        <input type="text" id="name" name="name" required>
+        <input type="text" id="name" name="name" required value="<%=player.name%>">
     </div>
     <div>
         <label for="email">Email</label>
-        <input type="email" id="email" name="email" required>
+        <input type="email" id="email" name="email" required value="<%=player.email%>">
     </div>
     <div>
         <label for="password">Password</label>

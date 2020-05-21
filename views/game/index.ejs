@@ -1,0 +1,42 @@
+<canvas id="ctx" width="500" height="500" style="border:1px solid #000000;"></canvas>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+    var ctx = document.getElementById("ctx").getContext("2d");
+    ctx.font = '30px Arial';
+    var socket = io('http://localhost:2000');
+    document.onkeydown = function(event) {
+        if (event.keyCode === 68) { // right
+            socket.emit('keyPress', {input: 'right', state: true});
+        } else if (event.keyCode === 83) { // down
+            socket.emit('keyPress', {input: 'down', state: true});
+        } else if (event.keyCode === 65) { // left
+            socket.emit('keyPress', {input: 'left', state: true});
+        } else if (event.keyCode === 87) { // up
+            socket.emit('keyPress', {input: 'up', state: true});
+        } else {
+
+        }
+    }
+    document.onkeyup = function(event) {
+        if (event.keyCode === 68) { // right
+            socket.emit('keyPress', {input: 'right', state: false});
+        } else if (event.keyCode === 83) { // down
+            socket.emit('keyPress', {input: 'down', state: false});
+        } else if (event.keyCode === 65) { // left
+            socket.emit('keyPress', {input: 'left', state: false});
+        } else if (event.keyCode === 87) { // up
+            socket.emit('keyPress', {input: 'up', state: false});
+        } else {
+
+        }
+    }
+    socket.on('newPositions', function(data) {
+        ctx.clearRect(0, 0, 500, 500);
+        for (var i = 0; i < data.length; i++) {
+            ctx.fillText(data[i].name, data[i].x, data[i].y);
+        }
+    });
+    
+</script>
+ 
+
