@@ -9,13 +9,14 @@ const app = express();
 const indexRouter = require('./routes/index')
 const registerRouter = require('./routes/register')
 const loginRouter = require('./routes/login')
-const gameRouter = require('./routes/game')
+
 const dashboardRouter = require('./routes/dashboard')
 const bodyParser = require('body-parser')
 
 //for sockets.io
-const server = require('http').createServer(app)
-var io = require('socket.io').listen(server)
+server = require('http').createServer(app)
+io = require('socket.io').listen(server)
+const gameRouter = require('./routes/game')(io)
 
 // Passport Config
 require('./config/passport')(passport);
@@ -67,7 +68,9 @@ app.use('/login', loginRouter);
 app.use('/game', gameRouter);
 app.use('/dashboard', dashboardRouter);
 
-app.listen(process.env.PORT || 3000);
+server.listen(process.env.PORT || 3000);
+
+
 console.log("Server started.");
 
 
