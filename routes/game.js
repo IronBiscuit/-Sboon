@@ -90,11 +90,11 @@ var Player = function(name) {
         }
         for(var i in PLAYER_LIST) {
             var thisPlayer = PLAYER_LIST[i];
-            player.updatePosition();
+            thisPlayer.updatePosition();
             packet.push({
-                x:player.x,
-                y:player.y,
-                name:player.name
+                x:thisPlayer.x,
+                y:thisPlayer.y,
+                name:thisPlayer.name
             })
         }
         for (var i in SOCKET_LIST) {
