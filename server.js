@@ -14,8 +14,8 @@ const dashboardRouter = require('./routes/dashboard')
 const bodyParser = require('body-parser')
 
 //for sockets.io
-const server = require('http').Server(app)
-var io = require('socket.io')(server, {})
+const server = require('http').createServer(app)
+var io = require('socket.io').listen(server)
 
 // Passport Config
 require('./config/passport')(passport);

@@ -2,9 +2,9 @@ const express = require('express')
 const app = express()
 const router = express.Router()
 const { handleError, ErrorHandler } = require('../models/error')
-const server = require('http').Server(app)
-const ion = require('socket.io')(server)
-server.listen(2000);
+const server = require('http').createServer(app)
+const io = require('socket.io').listen(server)
+server.listen(process.env.PORT || 3000);
 
 var currentName;
 var SOCKET_LIST = {}
@@ -50,7 +50,7 @@ var Player = function(name) {
     }
     return self;
 }
-ion.sockets.on('connection', function(socket){
+io.sockets.on('connection', function(socket){
     console.log('socket connection');
     socket.id = Math.random()
     socket.name = currentName;
