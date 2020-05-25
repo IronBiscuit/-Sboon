@@ -1,30 +1,24 @@
 const express = require('express')
 const router = express.Router()
-const newPlayer = require('../models/newPlayer')
 const { handleError, ErrorHandler } = require('../models/error')
 const Bcrypt = require("bcryptjs")
+const passport = require('passport');
+const { forwardAuthenticated } = require('../config/auth');
 
 
-router.get('/', (req, res) => {
-    console.log("reached login")
-    res.render('login/index', {newPlayer: new newPlayer()})
+router.get('/', forwardAuthenticated, (req, res) => {
+    res.render('login/index')
 })
 
-router.post('/', async (req, res) => {
-    
+router.post('/', async (req, res, next) => {
     try {
-        const currentPlayer = await newPlayer.findOne({name: req.body.name});
-        if (!currentPlayer) {
-            throw new ErrorHandler(400, "Invalid credentials!")
-        } else if (!Bcrypt.compareSync(req.body.password, currentPlayer.password)) {
-            throw new ErrorHandler(300, "Username/Password is incorrect")
-        } else {
-            var string = encodeURIComponent(req.body.name)
-            res.redirect('game/?valid=' + string)
-        }
+        passport.authenticate('local', {
+            successRedirect: '/dashboard',
+            failureRedirect: '/login',
+            failureFlash: true
+          })(req, res, next);
     } catch (error) {
-        res.render('login', {
-            player: new newPlayer(),
+        res.render('login/test', {
             errorMessage: error
         })
         console.log(error)

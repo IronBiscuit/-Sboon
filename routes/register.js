@@ -1,38 +1,78 @@
 const express = require('express')
 const router = express.Router()
-const newPlayer = require('../models/newPlayer')
 const { handleError, ErrorHandler } = require('../models/error')
-const Bcrypt = require("bcryptjs")
+const bcrypt = require("bcryptjs")
+const passport = require('passport');
+const User = require('../models/User');
+const { forwardAuthenticated } = require('../config/auth');
 
-router.get('/', (req, res) => {
-    res.render('register/index', {player: new newPlayer()})
+router.get('/', forwardAuthenticated, (req, res) => {
+    res.render('register/index')
 })
 
 
 router.post('/', async (req, res) => {
-    let player = new newPlayer()
-    try {
-        player = new newPlayer({
-            name: req.body.name,
-            email: req.body.email,
-            password: await Bcrypt.hash(req.body.password, 10)
-        })
-        const currentPlayer = await newPlayer.find({email: req.body.email})
-        if (currentPlayer.length > 0) {
-            throw new ErrorHandler(401, "Email is already taken!")
-        } else {
-            const anotherPlayer = await player.save()
-            res.redirect('login')
-        }
-        
-        
-    } catch (error) {
-        res.render('register', {
-            player: player,
-            errorMessage: error
-        })
-    }
-    console.log(error)
+    const { name, email, password, password2 } = req.body;
+    let errors = [];
+    if (!name || !email || !password || !password2) {
+        errors.push({ msg: 'Please enter all fields' });
+      }
+    
+      if (password != password2) {
+        errors.push({ msg: 'Passwords do not match' });
+      }
+    
+      if (password.length < 6) {
+        errors.push({ msg: 'Password must be at least 6 characters' });
+      }
+    
+      if (errors.length > 0) {
+        res.render('register/test', {
+          errors,
+          name,
+          email,
+          password,
+          password2
+        });
+      } else {
+        User.findOne({ email: email }).then(user => {
+          if (user) {
+            errors.push({ msg: 'Email already exists' });
+            res.render('register', {
+              errors,
+              name,
+              email,
+              password,
+              password2
+            });
+          } else {
+            const newUser = new User({
+              name,
+              email,
+              password
+            });
+            
+            // Hash Password
+            bcrypt.genSalt(10, (err, salt) => {
+              bcrypt.hash(newUser.password, salt, (err, hash) => {
+                if (err) throw err;
+                newUser.password = hash;
+                newUser
+                  .save()
+                  .then(user => {
+                    req.flash(
+                      'success_msg',
+                      'You are now registered and can log in'
+                    );
+                    res.redirect('login');
+                  })
+                  .catch(err => console.log(err));
+              });
+            });
+          }
+        });
+      }
+    
 })
 
 module.exports = router

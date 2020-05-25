@@ -1,0 +1,3 @@
+module.exports = {
+    MongoURI: 'mongodb+srv://WebGame:webgamepassword@webgame-bedjh.mongodb.net/test?retryWrites=true&w=majority'
+}

@@ -3,7 +3,7 @@ const app = express()
 const router = express.Router()
 const { handleError, ErrorHandler } = require('../models/error')
 const server = require('http').Server(app)
-const io = require('socket.io')(server)
+const ion = require('socket.io')(server)
 server.listen(2000);
 
 var currentName;
@@ -16,6 +16,12 @@ router.get('/', (req, res) => {
         playerName: currentName
     })
 })
+
+router.get('/logout', (req, res) => {
+    req.logout();
+    req.flash('success_msg', 'You are logged out');
+    res.redirect('/login');
+});
 
 var Player = function(name) {
     var self = {
@@ -44,7 +50,7 @@ var Player = function(name) {
     }
     return self;
 }
-io.sockets.on('connection', function(socket){
+ion.sockets.on('connection', function(socket){
     console.log('socket connection');
     socket.id = Math.random()
     socket.name = currentName;
@@ -77,7 +83,7 @@ setInterval(() => {
         pack.push({
             x:player.x,
             y:player.y,
-            name: player.name
+            name:player.name
         })
     }
     for (var i in SOCKET_LIST) {
