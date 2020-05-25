@@ -58,12 +58,27 @@ var Player = function(name) {
         var player = Player(currentName);
         SOCKET_LIST[socket.id] = socket;
         PLAYER_LIST[socket.id] = player;
+        var pack = [];
+        for(var i in PLAYER_LIST) {
+            var player = PLAYER_LIST[i];
+            pack.push({
+                x:player.x,
+                y:player.y,
+                name:player.name
+            })
+        }
+        for (var i in SOCKET_LIST) {
+            var socket = SOCKET_LIST[i];
+            socket.emit('startPosition', pack)
+        }
         socket.on('disconnect', function(){
             delete SOCKET_LIST[socket.id]
             delete PLAYER_LIST[socket.id]
         });
 
+
         socket.on('keyPress', function(data) {
+        var packet = [];
         if (data.input === 'left') {
             player.pressingLeft = data.state;
         } else if (data.input === 'right') {
@@ -73,12 +88,24 @@ var Player = function(name) {
         } else if (data.input === 'down') {
             player.pressingDown = data.state;
         }
+        for(var i in PLAYER_LIST) {
+            var thisPlayer = PLAYER_LIST[i];
+            player.updatePosition();
+            packet.push({
+                x:player.x,
+                y:player.y,
+                name:player.name
+            })
+        }
+        for (var i in SOCKET_LIST) {
+            var socket = SOCKET_LIST[i];
+            socket.emit('newPositions', packet)
+        }
         });
-
-       
+        
     });
 
-    setInterval(() => {
+    /*setInterval(() => {
         var pack = [];
         for(var i in PLAYER_LIST) {
             var player = PLAYER_LIST[i];
@@ -94,7 +121,7 @@ var Player = function(name) {
             socket.emit('newPositions', pack)
         }
         
-    }, 1000/25);
+    }, 1000/25);*/
 
     return router;
 }
