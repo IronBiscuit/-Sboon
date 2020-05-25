@@ -67,7 +67,7 @@ app.use('/login', loginRouter);
 app.use('/game', gameRouter);
 app.use('/dashboard', dashboardRouter);
 
-server.listen(process.env.PORT || 3000);
+app.listen(process.env.PORT || 3000);
 console.log("Server started.");
 
 
