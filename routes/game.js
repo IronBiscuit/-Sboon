@@ -4,7 +4,7 @@ const router = express.Router()
 const { handleError, ErrorHandler } = require('../models/error')
 const server = require('http').createServer(app)
 const io = require('socket.io').listen(server)
-//server.listen(process.env.PORT || 3000);
+server.listen('https://lie-or-die.herokuapp.com/');
 
 var currentName;
 var SOCKET_LIST = {}
