@@ -1,10 +1,35 @@
-<canvas id="ctx" width="500" height="500" style="border:1px solid #000000;"></canvas>
+<canvas tabindex='1' id="ctx" width="500" height="500" style="border:1px solid #000000;"></canvas>
+<div id = "chat-text" style="width:500px; height:100px; overflow-y:scroll">
+    <div>Hello!</div>
+</div>
+<form id="chat-form">
+    <input id="chat-input" type="text" style="width:500px"/>
+</form>
 <script src="/socket.io/socket.io.js"></script>
 <script>
     var ctx = document.getElementById("ctx").getContext("2d");
+    var ctxx = document.getElementById("ctx");
+    var chatText = document.getElementById("chat-text");
+    var chatForm = document.getElementById("chat-form");
+    var chatInput = document.getElementById("chat-input");
+    var playerName = "<%= name %>";
+    console.log("hello");
     ctx.font = '30px Arial';
     var socket = io();
-    document.onkeydown = function(event) {
+    socket.on('addToChat', function(data) {
+        chatText.innerHTML += '<div>' + data + '</div>';
+    })
+
+    chatForm.onsubmit = function(e) {
+        e.preventDefault();
+        socket.emit('sendMsgToServer', {
+            msg: chatInput.value,
+            name: playerName
+        });
+        chatInput.value = '';
+    }
+    ctxx.addEventListener('keydown', function(event) {
+        event.preventDefault();
         if (event.keyCode === 68) { // right
             socket.emit('keyPress', {input: 'right', state: true});
         } else if (event.keyCode === 83) { // down
@@ -14,10 +39,12 @@
         } else if (event.keyCode === 87) { // up
             socket.emit('keyPress', {input: 'up', state: true});
         } else {
-
+            
         }
-    }
-    document.onkeyup = function(event) {
+    }, false)
+    
+    ctxx.addEventListener('keyup', function(event) {
+        event.preventDefault();
         if (event.keyCode === 68) { // right
             socket.emit('keyPress', {input: 'right', state: false});
         } else if (event.keyCode === 83) { // down
@@ -27,15 +54,11 @@
         } else if (event.keyCode === 87) { // up
             socket.emit('keyPress', {input: 'up', state: false});
         } else {
+           
+        }
+    }, false)
+        
 
-        }
-    }
-    socket.on('startPosition', function(data) {
-        ctx.clearRect(0, 0, 500, 500);
-        for (var i = 0; i < data.length; i++) {
-            ctx.fillText(data[i].name, data[i].x, data[i].y);
-        }
-    })
     socket.on('newPositions', function(data) {
         ctx.clearRect(0, 0, 500, 500);
         for (var i = 0; i < data.length; i++) {

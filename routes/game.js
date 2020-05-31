@@ -13,6 +13,7 @@ module.exports = function(io) {
 
 router.get('/', (req, res) => {
     currentName = req.query.valid
+    console.log(currentName)
     res.render('game', {
         name: currentName
     })
@@ -62,6 +63,16 @@ var Player = function(name) {
             delete SOCKET_LIST[socket.id]
             delete PLAYER_LIST[socket.id]
         });
+
+        socket.on('sendMsgToServer', function(data) {
+            console.log('hello');
+            var name = data.name;
+            var message = data.msg;
+            var finalMessage = name + ": " + message;
+            for(var i in SOCKET_LIST) {
+                SOCKET_LIST[i].emit('addToChat', finalMessage);
+            }
+        })
 
 
         socket.on('keyPress', function(data) {
