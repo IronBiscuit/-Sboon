@@ -41,7 +41,6 @@
         self.y = initPack.y;
         self.name = initPack.name
         Player.list[self.id] = self;
-        console.log(Player.list);
         return self;
     }
     Player.list = [];
@@ -50,7 +49,7 @@
         console.log('another user connected')
         for (var i = 0; i < data.player.length; i++) {
             new Player(data.player[i]);
-            console.log(Player.list.length);
+            console.log(Player.list);
         }
     })
 

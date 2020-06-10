@@ -71,13 +71,17 @@ var Player = function(name, id) {
         self.updatePosition();
     }
     Player.list[id] = self;
-    initPack.player.push(self);
     return self;
 }
 Player.list = {};
 Player.onConnect = function(socket) {
     var player = Player(socket.name, socket.id);
-    socket.emit('init', initPack);
+    for(var i in SOCKET_LIST) {
+        for (var i in Player.list) {
+            initPack.player.push(Player.list[i]);
+        }
+        socket.emit('init', initPack);
+    }
     initPack.player = [];
     socket.on('keyPress', function(data) {
         if (data.input === 'left') {
