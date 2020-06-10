@@ -76,11 +76,12 @@ var Player = function(name, id) {
 Player.list = {};
 Player.onConnect = function(socket) {
     var player = Player(socket.name, socket.id);
+    for (var i in Player.list) {
+        initPack.player.push(Player.list[i]);
+    }
     for(var i in SOCKET_LIST) {
-        for (var i in Player.list) {
-            initPack.player.push(Player.list[i]);
-        }
-        socket.emit('init', initPack);
+       var socketed = SOCKET_LIST[i]
+       socketed.emit('init', initPack);
     }
     initPack.player = [];
     socket.on('keyPress', function(data) {
@@ -128,8 +129,8 @@ io.sockets.on('connection', function(socket) {
         var identity = Math.random();
         socket.id = identity;
         socket.name = currentName;
-        Player.onConnect(socket);
         SOCKET_LIST[socket.id] = socket;
+        Player.onConnect(socket);
         socket.on('disconnect', function(){
             delete SOCKET_LIST[socket.id]
             Player.onDisconnect(socket)
