@@ -112,6 +112,7 @@ Player.onDisconnect = function(socket) {
     }
     removePack.player = [];
     delete Player.list[socket.id];
+    console.log('disconnect reached');
 }
 Player.update = function() {
     var pack = [];

@@ -49,7 +49,6 @@
         console.log('another user connected')
         for (var i = 0; i < data.player.length; i++) {
             new Player(data.player[i]);
-            console.log(Player.list);
         }
     })
 
@@ -69,8 +68,9 @@
     })
 
     socket.on('remove', function(data){
+        console.log('removed reached');
         for (var i = 0; i < data.player.length; i++) {
-            Player.list.splice(data.player[i].id, 1);
+            Player.list = Player.list.splice(data.player[i].id, 1);
         }
     })
 
