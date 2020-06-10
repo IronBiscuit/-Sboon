@@ -80,7 +80,7 @@ Player.onConnect = function(socket) {
         initPack.player.push(Player.list[i]);
     }
     for(var i in SOCKET_LIST) {
-       var socketed = SOCKET_LIST[i]
+       var socketed = SOCKET_LIST[i];
        socketed.emit('init', initPack);
     }
     initPack.player = [];
@@ -106,7 +106,10 @@ Player.onConnect = function(socket) {
 }
 Player.onDisconnect = function(socket) {
     removePack.player.push(Player.list[socket.id]);
-    socket.emit('remove', removePack);
+    for (var i in SOCKET_LIST) {
+        var socketed = SOCKET_LIST[i];
+        socketed.emit('remove', removePack);
+    }
     removePack.player = [];
     delete Player.list[socket.id];
 }
