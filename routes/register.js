@@ -27,7 +27,7 @@ router.post('/', async (req, res) => {
       }
     
       if (errors.length > 0) {
-        res.render('register/test', {
+        res.render('register', {
           errors,
           name,
           email,

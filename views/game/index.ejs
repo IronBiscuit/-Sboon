@@ -1,10 +1,25 @@
-<canvas tabindex='1' id="ctx" width="500" height="500" style="border:1px solid #000000;"></canvas>
-<div id = "chat-text" style="width:500px; height:100px; overflow-y:scroll">
-    <div>Hello!</div>
+<h1 class="text-center mt-4">LIE || DIE</h1>
+<p class="lead text-center mb-3">Say hi to your friends <%= name %>!</p>
+<canvas tabindex='1' id="ctx" width="750" height="500" style="border:1px solid #000000; float:left;"></canvas>
+<div id="chatbox" style="float:right; width:25%;">
+    <div class="chat-sidebar">
+        <h3><i class="fas fa-users"></i> Player's Chat</h3>
+    </div>
+        <div id = "chat-text" style="float:top; height:200px; overflow-y:auto; overflow-x:auto; "></div>
+    <div class="chat-form-container">
+    <form id="chat-form">
+        <input
+        id="chat-input"
+        type="text"
+        placeholder="Enter Message"
+        required
+        autocomplete="off"
+        />
+        <button type="submit" id="chat-form"><i class="fas fa-paper-plane"></i> Send</button>
+    </form>
+    </div>
+    <a href="/dashboard" class="btn btn-secondary" style="margin-top: 10px;">Dashboard</a>
 </div>
-<form id="chat-form">
-    <input id="chat-input" type="text" style="width:500px"/>
-</form>
 <script src="/socket.io/socket.io.js"></script>
 <script>
     var ctx = document.getElementById("ctx").getContext("2d");
@@ -14,10 +29,65 @@
     var chatInput = document.getElementById("chat-input");
     var playerName = "<%= name %>";
     console.log("hello");
-    ctx.font = '30px Arial';
+    ctx.font = '30px lucida';
     var socket = io();
+
+    //game 
+    var Player = function(initPack) {
+        var self = {};
+        self.id = initPack.id;
+        self.number = initPack.number;
+        self.x = initPack.x;
+        self.y = initPack.y;
+        self.name = initPack.name
+        Player.list[self.id] = self;
+        console.log(Player.list);
+        return self;
+    }
+    Player.list = [];
+
+    socket.on('init', function(data) {
+        console.log('another user connected')
+        for (var i = 0; i < data.player.length; i++) {
+            new Player(data.player[i]);
+            console.log(Player.list.length);
+        }
+    })
+
+    socket.on('update', function(data) {
+        for (var i = 0; i < data.length; i++) {
+            var pack = data[i];
+            var p = Player.list[pack.id];
+            if (p) {
+                if (pack.x !== undefined) {
+                    p.x = pack.x;
+                }
+                if (pack.y !== undefined) {
+                    p.y = pack.y;
+                }
+            }
+        }
+    })
+
+    socket.on('remove', function(data){
+        for (var i = 0; i < data.player.length; i++) {
+            delete Player.list[data.player[i]];
+        }
+    })
+
+    setInterval(function(){
+        ctx.clearRect(0, 0, 750, 500);
+        for (var i in Player.list) {
+            ctx.fillText(Player.list[i].name, Player.list[i].x, Player.list[i].y);
+        }
+    }, 1000/65);
+
+    //Chat 
     socket.on('addToChat', function(data) {
-        chatText.innerHTML += '<div>' + data + '</div>';
+        const messageElement = document.createElement('div');
+        messageElement.innerText = data;
+        chatText.append(messageElement);
+        chatText.scrollTop = chatText.scrollHeight;
     })
 
     chatForm.onsubmit = function(e) {
@@ -58,13 +128,6 @@
         }
     }, false)
         
-
-    socket.on('newPositions', function(data) {
-        ctx.clearRect(0, 0, 500, 500);
-        for (var i = 0; i < data.length; i++) {
-            ctx.fillText(data[i].name, data[i].x, data[i].y);
-        }
-    }); 
     
 </script>
  
