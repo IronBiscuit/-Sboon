@@ -31,7 +31,37 @@
     console.log("hello");
     ctx.font = '30px lucida';
     var socket = io();
+    var WIDTH = 750;
+    var HEIGHT = 500;
+    var tileSize = 16;
+    
 
+    // collision testing 
+    
+
+    
+
+    //map img
+    var Img = {};
+    var selfId = null;
+    var Maps = function() {
+        var self = {
+            image: new Image(),
+            width: 86,
+            height: 81,
+        }
+        self.image.src = "/testMap.png";
+        self.drawMap = function() {
+            var x = WIDTH/2 - Player.list[selfId].x;
+            var y = HEIGHT/2 - Player.list[selfId].y;
+            ctx.drawImage(self.image, x, y);
+        }
+        return self;
+    }
+    var thisMap = Maps();
+    //player img
+    Img.player = new Image();
+    Img.player.src = "/player.png";
     //game 
     var Player = function(initPack) {
         var self = {};
@@ -39,14 +69,23 @@
         self.number = initPack.number;
         self.x = initPack.x;
         self.y = initPack.y;
-        self.name = initPack.name
+        self.name = initPack.name;
         Player.list[self.id] = self;
+        self.draw = function() {
+            var x = self.x - Player.list[selfId].x + WIDTH/2;
+            var y = self.y - Player.list[selfId].y + HEIGHT/2;
+            var width = Img.player.width * 2;
+            var height = Img.player.height * 2;
+            ctx.drawImage(Img.player, 0, 0, Img.player.width, Img.player.height, x-width/2, y-height/2, width, height);
+        }
         return self;
     }
     Player.list = [];
-
+    
     socket.on('init', function(data) {
-        console.log('another user connected')
+        if (data.selfId) {
+            selfId = data.selfId;
+        }
         for (var i = 0; i < data.player.length; i++) {
             new Player(data.player[i]);
         }
@@ -75,9 +114,13 @@
     })
 
     setInterval(function(){
+        if (!selfId) {
+            return;
+        }
         ctx.clearRect(0, 0, 750, 500);
+        thisMap.drawMap();
         for (var i in Player.list) {
-            ctx.fillText(Player.list[i].name, Player.list[i].x, Player.list[i].y);
+            Player.list[i].draw();
         }
     }, 1000/65);
 

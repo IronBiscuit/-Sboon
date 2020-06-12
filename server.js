@@ -28,6 +28,7 @@ const db = require('./config/keys').MongoURI
 mongoose.connect(db, {useNewUrlPaser: true}).then(() => console.log('MongoDB Connected')).catch(err => console.log(err))
 
 // EJS
+app.use(express.static('public'))
 app.use(expressLayouts);
 app.set('view engine', 'ejs');
 app.set('views', __dirname + '/views')
@@ -67,6 +68,7 @@ app.use('/register', registerRouter);
 app.use('/login', loginRouter);
 app.use('/game', gameRouter);
 app.use('/dashboard', dashboardRouter);
+
 
 server.listen(process.env.PORT || 3000);
 
