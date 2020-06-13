@@ -75,7 +75,8 @@ var Entity = function(param) {
         const oldY = self.y;
         self.x += self.spdX;
         self.y += self.spdY;
-        if (self.isPositionWall(self)) {
+        if (self.isPositionWall(self
+            )) {
             self.x = oldX;
             self.y = oldY;
         }
