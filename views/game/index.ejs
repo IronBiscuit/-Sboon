@@ -63,6 +63,7 @@
     Img.player = new Image();
     Img.player.src = "/player.png";
     //game 
+    var numberOfPlayers = 0;
     var Player = function(initPack) {
         var self = {};
         self.id = initPack.id;
@@ -83,6 +84,7 @@
     Player.list = [];
     
     socket.on('init', function(data) {
+        numberOfPlayers = numberOfPlayers + 1;
         if (data.selfId && selfId == null) {
             selfId = data.selfId;
         }
@@ -114,14 +116,13 @@
     })
 
     setInterval(function(){
-        console.log(selfId);
-        console.log(Player.list.length);
         if (!selfId) {
             return;
         }
         ctx.clearRect(0, 0, 750, 500);
         thisMap.drawMap();
         for (var i in Player.list) {
+            console.log("reached here");
             Player.list[i].draw();
         }
     }, 1000/65);
