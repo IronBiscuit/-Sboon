@@ -111,7 +111,7 @@
     socket.on('remove', function(data){
         console.log('removed reached');
         for (var i = 0; i < data.player.length; i++) {
-            Player.list = Player.list.splice(data.player[i].id, 1);
+            delete Player.list[data.player[i].id];
             console.log(Player.list);
         }
     })
