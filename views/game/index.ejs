@@ -98,6 +98,7 @@
     var Player = function(initPack) {
         var self = {};
         self.id = initPack.id;
+        self.groupId = initPack.groupId;
         self.number = initPack.number;
         self.x = initPack.x;
         self.y = initPack.y;
@@ -239,6 +240,7 @@
     })
 
     socket.on('remove', function(data){
+        console.log('oi bij');
         for (var i = 0; i < data.player.length; i++) {
             delete Player.list[data.player[i].id];
         }
@@ -375,7 +377,8 @@
         e.preventDefault();
         socket.emit('sendMsgToServer', {
             msg: chatInput.value,
-            name: playerName
+            name: playerName,
+            groupId: Player.list[selfId].groupId
         });
         chatInput.value = '';
     }

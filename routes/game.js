@@ -1,11 +1,13 @@
 const express = require('express')
 const app = express()
 const { handleError, ErrorHandler } = require('../models/error')
+const e = require('express')
 
 module.exports = function(io) {
     const router = express.Router()
     var currentName;
     var SOCKET_LIST = {}
+    var MAIN_SOCKET_LIST = [];
     var initPack = {player: []};
     var removePack = {player: []};
     var tileSize = 16;
@@ -116,6 +118,7 @@ var Player = function(name, id) {
     self.pressingDown = false;
     self.maxSpeed = 3;
     self.id = id;
+    self.groupId = null;
     self.updateSpd = function() {
         if (self.pressingRight) {
             self.spdX = self.maxSpeed;
@@ -137,25 +140,42 @@ var Player = function(name, id) {
         self.updatePosition();
     }
     Player.list[id] = self;
+    Player.tempList[id] = self;
     return self;
 }
 
 Player.list = {};
+Player.tempList = {};
 Player.numberOfPlayers = 0;
 
 Player.onConnect = function(socket) {
     var player = Player(socket.name, socket.id);
-    Player.numberOfPlayers = Player.numberOfPlayers + 1;
-    for (var i in Player.list) {
-        initPack.player.push(Player.list[i]);
+    for (var i in Player.tempList) {
+        initPack.player.push(Player.tempList[i]);
     }
     initPack.selfId = socket.id;
-    for(var i in SOCKET_LIST) {
-       var SOCKET = SOCKET_LIST[i];
+    var socketGroupId = null;
+    if (Player.numberOfPlayers === 0) {
+        socketGroupId = MAIN_SOCKET_LIST.length;
+        MAIN_SOCKET_LIST[socketGroupId] = [];
+    } else if (Player.numberOfPlayers === 1) {
+        socketGroupId = MAIN_SOCKET_LIST.length - 1;
+    }
+    socket.groupId = socketGroupId;
+    MAIN_SOCKET_LIST[socketGroupId].push(socket);
+    player.groupId = socketGroupId;
+    Player.numberOfPlayers = Player.numberOfPlayers + 1;
+    for(var i in MAIN_SOCKET_LIST[socket.groupId]) {
+       var SOCKET = MAIN_SOCKET_LIST[socket.groupId][i];
        SOCKET.emit('init', initPack);
-       if (Player.numberOfPlayers === 2) {
-           SOCKET.emit('gameStart');
-       }
+    }
+    if (Player.numberOfPlayers === 2) {
+        for(var i in MAIN_SOCKET_LIST[socket.groupId]) {
+            var SOCKET = MAIN_SOCKET_LIST[socket.groupId][i];
+            SOCKET.emit('gameStart');
+         }
+         Player.numberOfPlayers = 0;
+         Player.tempList = {}
     }
 
     socket.on('gameStarted', function() {
@@ -193,55 +213,58 @@ Player.onConnect = function(socket) {
 }
 Player.onDisconnect = function(socket) {
     removePack.player.push(Player.list[socket.id]);
-    for (var i in SOCKET_LIST) {
-        var socketed = SOCKET_LIST[i];
+    var sockets = MAIN_SOCKET_LIST[socket.groupId];
+    for (var i in sockets) {
+        var socketed = sockets[i]
         socketed.emit('remove', removePack);
     }
     removePack.player = [];
     delete Player.list[socket.id];
-    Player.numberOfPlayers = Player.numberOfPlayers - 1;
-    console.log('disconnect reached');
+    delete Player.tempList[socket.id];
 }
 Player.update = function() {
-    var pack = [];
+    var pack = {};
+    var packs = [];
         for(var i in Player.list) {
             var player = Player.list[i];
+            var playerGroupId = Player.list[i].groupId;
             player.update();
-            pack.push({
-                x:player.x,
-                y:player.y,
-                name:player.name,
-                id: player.id
-            })
-        }
-    return pack;
+            pack.x = player.x;
+            pack.y = player.y;
+            pack.name = player.name;
+            pack.id = player.id;
+            if (packs[playerGroupId] == null) {
+                packs[playerGroupId] = []
+            }
+            packs[playerGroupId].push(pack);
+            pack = {};
+        } 
+    return packs;
 }
 io.sockets.on('connection', function(socket) {
         console.log('socket connection')
         var identity = Math.random();
         socket.id = identity;
         socket.name = currentName;
+        socket.groupId = null;
         SOCKET_LIST[socket.id] = socket;
         Player.onConnect(socket);
         socket.on('disconnect', function(){
-            delete SOCKET_LIST[socket.id]
+            delete SOCKET_LIST[socket.id];
             Player.onDisconnect(socket)
         });  
 });
 
     setInterval(() => {
-        var pack = Player.update();
-        for (var i in SOCKET_LIST) {
-            var socket = SOCKET_LIST[i];
-            socket.emit('update', pack)
+        var packs = Player.update();
+        for (var i in MAIN_SOCKET_LIST) {
+            var sockets = MAIN_SOCKET_LIST[i];
+            for (var i in sockets) {
+                var socket = sockets[i];
+                socket.emit('update', packs[socket.groupId]);
+            }
         }
     }, 1000/65);
 
     return router;
 }
-
-
-
-
-
-
