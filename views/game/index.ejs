@@ -1,6 +1,13 @@
 <h1 class="text-center mt-4">LIE || DIE</h1>
 <p class="lead text-center mb-3">Say hi to your friends <%= name %>!</p>
-<canvas tabindex='1' id="ctx" width="750" height="500" style="border:1px solid #000000; float:left; transition: width .5s, height .5s, top .5s, left .5s;"></canvas>
+<div>
+    <canvas tabindex='1' id="ctx" width="750" height="500" style="border:1px solid #000000; float:left; transition: width .5s, height .5s, top .5s, left .5s;"></canvas>
+    <button type = "button" class="playerButtons" style="position: absolute; left: 20%; top: 40%;">Vote</button>
+    <button type = "button" class="playerButtons" style="position: absolute; left: 36.5%; top: 40%;">Vote</button>
+    <button type = "button" class="playerButtons" style="position: absolute; left: 53%; top: 40%;">Vote</button>
+    <button type = "button" class="playerButtons" style="position: absolute; left: 28.25%; top: 60%;">Vote</button>
+    <button type = "button" class="playerButtons" style="position: absolute; left: 44.75%; top: 60%;">Vote</button>
+</div>
 <div id="chatbox" style="float:right; width:25%;">
     <div class="chat-sidebar">
         <h3><i class="fas fa-users"></i> Player's Chat</h3>
@@ -37,7 +44,6 @@
     
 
     //map img
-    var Img = {};
     var selfId = null;
     var gameMap = function() {
         var self = {
@@ -91,9 +97,6 @@
         return self;
     }
     var currentMap = lobbyMap();
-    //player img
-    Img.player = new Image();
-    Img.player.src = "/player.png";
     //game 
     var Player = function(initPack) {
         var self = {};
@@ -108,12 +111,14 @@
         self.pressingLeft = false;
         self.pressingUp = false;
         self.pressingDown = false;
+        self.img = new Image();
+        self.img.src = "/player.png";
         self.mapDraw = function() {
             var x = self.x - Player.list[selfId].x + WIDTH/2;
             var y = self.y - Player.list[selfId].y + HEIGHT/2;
-            var width = Img.player.width * 2;
-            var height = Img.player.height * 2;
-            ctx.drawImage(Img.player, 0, 0, Img.player.width, Img.player.height, x-width/2, y-height/2, width, height);
+            var width = self.img.width * 2;
+            var height = self.img.height * 2;
+            ctx.drawImage(self.img, 0, 0, self.img.width, self.img.height, x-width/2, y-height/2, width, height);
         }
         self.reducedVision = function(opacity) {
             if (self.pressingDown) {
@@ -199,9 +204,9 @@
         self.lobbyDraw = function() {
             var x = self.x;
             var y = self.y;
-            var width = Img.player.width * 2;
-            var height = Img.player.height * 2;
-            ctx.drawImage(Img.player, x, y, Img.player.width * 2, Img.player.height * 2);
+            var width = self.img * 2;
+            var height = self.img * 2;
+            ctx.drawImage(self.img, x, y, self.img.width * 2, self.img.height * 2);
         }
         self.Draw = function() {
             self.lobbyDraw();
@@ -240,7 +245,6 @@
     })
 
     socket.on('remove', function(data){
-        console.log('oi bij');
         for (var i = 0; i < data.player.length; i++) {
             delete Player.list[data.player[i].id];
         }

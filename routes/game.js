@@ -173,6 +173,7 @@ Player.onConnect = function(socket) {
         for(var i in MAIN_SOCKET_LIST[socket.groupId]) {
             var SOCKET = MAIN_SOCKET_LIST[socket.groupId][i];
             SOCKET.emit('gameStart');
+            SOCKET.inGame = true;
          }
          Player.numberOfPlayers = 0;
          Player.tempList = {}
@@ -247,10 +248,26 @@ io.sockets.on('connection', function(socket) {
         socket.id = identity;
         socket.name = currentName;
         socket.groupId = null;
-        SOCKET_LIST[socket.id] = socket;
+        socket.inGame = false;
+        //SOCKET_LIST[socket.id] = socket;
         Player.onConnect(socket);
         socket.on('disconnect', function(){
-            delete SOCKET_LIST[socket.id];
+            const index = MAIN_SOCKET_LIST[socket.groupId].indexOf(socket);
+            MAIN_SOCKET_LIST[socket.groupId].splice(index, 1);
+            if (MAIN_SOCKET_LIST[socket.groupId].length == 0) {
+                MAIN_SOCKET_LIST.splice(socket.groupId, 1);
+                for (var i = index; i < MAIN_SOCKET_LIST.length; i++) {
+                    var sockets = MAIN_SOCKET_LIST[i];
+                    for (var i in sockets) {
+                        var backSocket = sockets[i];
+                        backSocket.groupId = backSocket.groupId - 1;
+                    }
+                }
+            }
+            console.log(MAIN_SOCKET_LIST);
+            if (!socket.inGame) {
+                Player.numberOfPlayers = Player.numberOfPlayers - 1;
+            }
             Player.onDisconnect(socket)
         });  
 });
