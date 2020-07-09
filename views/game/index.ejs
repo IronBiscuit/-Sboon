@@ -2,11 +2,11 @@
 <p class="lead text-center mb-3">Say hi to your friends <%= name %>!</p>
 <div>
     <canvas tabindex='1' id="ctx" width="750" height="500" style="border:1px solid #000000; float:left; transition: width .5s, height .5s, top .5s, left .5s;"></canvas>
-    <button type = "button" class="playerButtons" style="position: absolute; left: 20%; top: 40%;">Vote</button>
-    <button type = "button" class="playerButtons" style="position: absolute; left: 36.5%; top: 40%;">Vote</button>
-    <button type = "button" class="playerButtons" style="position: absolute; left: 53%; top: 40%;">Vote</button>
-    <button type = "button" class="playerButtons" style="position: absolute; left: 28.25%; top: 60%;">Vote</button>
-    <button type = "button" class="playerButtons" style="position: absolute; left: 44.75%; top: 60%;">Vote</button>
+    <button type = "button" disabled name = "first" class="playerButtons" onclick="vote(this)" style="position: absolute; left: 20%; top: 40%; display: none;">Vote</button>
+    <button type = "button" disabled name = "second" class="playerButtons" onclick="vote(this)" style="position: absolute; left: 36.5%; top: 40%; display: none;">Vote</button>
+    <button type = "button" disabled name = "third" class="playerButtons" onclick="vote(this)" style="position: absolute; left: 53%; top: 40%; display: none;">Vote</button>
+    <button type = "button" disabled name = "fourth" class="playerButtons" onclick="vote(this)" style="position: absolute; left: 28.25%; top: 60%; display: none;">Vote</button>
+    <button type = "button" disabled name = "fifth" class="playerButtons" onclick="vote(this)" style="position: absolute; left: 44.75%; top: 60%; display: none;">Vote</button>
 </div>
 <div id="chatbox" style="float:right; width:25%;">
     <div class="chat-sidebar">
@@ -34,8 +34,8 @@
     var chatText = document.getElementById("chat-text");
     var chatForm = document.getElementById("chat-form");
     var chatInput = document.getElementById("chat-input");
+    var buttons = document.getElementsByClassName('playerButtons');
     var playerName = "<%= name %>";
-    console.log("hello");
     ctx.font = '30px lucida';
     var socket = io();
     var WIDTH = 750;
@@ -106,7 +106,9 @@
         self.x = initPack.x;
         self.y = initPack.y;
         self.name = initPack.name;
+        self.lynchCoordinate = initPack.lynchCoordinate;
         Player.list[self.id] = self;
+        self.voteCount = 0;
         self.pressingRight = false;
         self.pressingLeft = false;
         self.pressingUp = false;
@@ -260,6 +262,7 @@
         }, delay);
     }
 
+    
     var countDown = 5;
     var gameStartCountdown = function() {
         const messageElement = document.createElement('div');
@@ -282,7 +285,9 @@
                 ctx.closePath();
                 screenHeight = screenHeight + 10;
                 if(screenHeight == 550) {
-                    socket.emit('gameStarted');
+                    socket.emit('gameStarted', {
+                        groupID: Player.list[selfId].groupId
+                    });
                     currentMap = gameMap();
                     for (var i in Player.list) {
                         Player.list[i].updateDrawMethod();
@@ -293,6 +298,118 @@
             return;
         }
     }
+
+    // lynch system
+    var lynchWindow = function() {
+        loading = true;
+        voting = false;
+        var lynchInterval = setInterval(function() {
+            ctx.clearRect(0, 0, 750, 500);
+            if (!voting) {
+                currentMap.drawMap();
+            }
+            ctx.beginPath();
+            ctx.rect(0, 0, 750, screenHeight);
+            ctx.fillStyle = "white";
+            ctx.fill();
+            ctx.closePath();
+            if (screenHeight < 560) {
+                screenHeight = screenHeight + 20;
+            } else {
+                voting = true;
+                for (var i in Player.list) {
+                    var player = Player.list[i];
+                    ctx.drawImage(player.img, player.lynchCoordinate.x, player.lynchCoordinate.y, player.img.width * 2, player.img.height * 2)
+                    ctx.fillStyle = "black";
+                    ctx.fillText(player.voteCount, player.lynchCoordinate.x + 8, player.lynchCoordinate.y - 10);
+                }
+            }
+        }, 1000/65);
+        for (var i = 0; i < buttons.length; i++) {
+                buttons[i].disabled = false;
+                buttons[i].style.display = "block";
+        }
+    }
+
+    socket.on('lynchTime', function() {
+        lynchWindow();
+    })
+
+    //lynch vote buttons
+    var lastVote = null;
+    function vote(voteButton) {
+        if (voteButton.name == "first") {
+            socket.emit("vote", {
+                id: selfId,
+                position: 1,
+                groupID: Player.list[selfId].groupId,
+                previousVote: lastVote
+            })
+            lastVote = 1;
+        } else if (voteButton.name == "second") {
+            socket.emit("vote", {
+                id: selfId,
+                position: 2,
+                groupID: Player.list[selfId].groupId,
+                previousVote: lastVote
+            })
+            lastVote = 2;
+        } else if (voteButton.name == "third") {
+            socket.emit("vote", {
+                id: selfId,
+                position: 3,
+                groupID: Player.list[selfId].groupId,
+                previousVote: lastVote
+            })
+            lastVote = 3;
+        } else if (voteButton.name == "fourth") {
+            socket.emit("vote", {
+                id: selfId,
+                position: 4,
+                groupID: Player.list[selfId].groupId,
+                previousVote: lastVote
+            })
+            lastVote = 4;
+        } else if (voteButton.name == "fifth") {
+            socket.emit("vote", {
+                id: selfId,
+                position: 5,
+                groupID: Player.list[selfId].groupId,
+                previousVote: lastVote
+            })
+            lastVote = 5;
+        }
+        voteButton.disabled = true;
+        for (var i = 0; i < buttons.length; i++) {
+            if (buttons[i].name !== voteButton.name) {
+                buttons[i].disabled = false;
+            }
+        }
+    }
+    socket.on('voteUpdate', function(data) {
+        for (var i = 0; i < data.length; i++) {
+            var player = Player.list[data[i].id];
+            player.voteCount = data[i].voteCount;
+        }
+    })
+
+    socket.on('lynchResult', function(data) {
+        var lynchId = data.lynchedId;
+        console.log(lynchId);
+        if (lynchId != null || lynchId != undefined) {
+            var lynchedName = Player.list[lynchId].name;
+            const messageElement = document.createElement('div');
+            messageElement.innerText = lynchedName + " has been lynched!"
+            chatText.append(messageElement);
+            chatText.scrollTop = chatText.scrollHeight;
+        } else {
+            const messageElement = document.createElement('div');
+            messageElement.innerText = "No one has been voted out!"
+            chatText.append(messageElement);
+            chatText.scrollTop = chatText.scrollHeight;
+        }
+    })
+
     socket.on('gameStart', function() {
         setIntervalX(function(){
             gameStartCountdown();
@@ -302,7 +419,6 @@
     var screenHeight = 0;
     var loading = false;
     socket.on('gameLoaded', function() {
-        var canvasHeight = 550;
         var intervalID = setInterval(function() {
             ctx.clearRect(0, 0, 750, 500);
             currentMap.drawMap();
@@ -310,12 +426,11 @@
                 Player.list[i].Draw();
             }
             ctx.beginPath();
-            ctx.rect(0, 0, 750, canvasHeight);
+            ctx.rect(0, 0, 750, screenHeight);
             ctx.fillStyle = "black";
             ctx.fill();
-            console.log(canvasHeight);
-            canvasHeight = canvasHeight - 10;
-            if(canvasHeight === 0) {
+            screenHeight = screenHeight - 10;
+            if(screenHeight === 0) {
                 loading = false;
                 clearInterval(intervalID); 
                 setTimeout(function() {
