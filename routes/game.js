@@ -279,7 +279,7 @@ var mapArray = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
             MAIN_SOCKET_LIST[socket.groupId].splice(index, 1);
             if (MAIN_SOCKET_LIST[socket.groupId].length == 0) {
                 MAIN_SOCKET_LIST.splice(socket.groupId, 1);
-                for (var i = index; i < MAIN_SOCKET_LIST.length; i++) {
+                for (var i = socket.groupId; i < MAIN_SOCKET_LIST.length; i++) {
                     var sockets = MAIN_SOCKET_LIST[i];
                     for (var i in sockets) {
                         var backSocket = sockets[i];
