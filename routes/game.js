@@ -133,6 +133,8 @@ var mapArray = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
         self.maxSpeed = 3;
         self.id = id;
         self.voteCount = 0;
+        self.mouseAngle = 0;
+        self.meleeAttack = 0;
         self.groupId = null;
         self.lynchCoordinate = getLynchCoordinate();
         self.updateSpd = function() {
@@ -228,11 +230,13 @@ var mapArray = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
             }
         });
         socket.on('sendMsgToServer', function(data) {
+            var sockets = MAIN_SOCKET_LIST[data.groupId];
             var name = data.name;
             var message = data.msg;
             var finalMessage = name + ": " + message;
-            for(var i in SOCKET_LIST) {
-                SOCKET_LIST[i].emit('addToChat', finalMessage);
+            for(var i in sockets) {
+                var socket = sockets[i];
+                socket.emit('addToChat', finalMessage);
             }
         })
     }
