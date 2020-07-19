@@ -9,7 +9,8 @@ module.exports = function(io) {
     var SOCKET_LIST = {}
     var MAIN_SOCKET_LIST = [];
     var initPack = {player: []};
-    var removePack = {player: []};
+    var bulletPack = {bullets: []}
+    var removePack = {player: [], bullet: []};
     var atVotingStage = [];
     var tileSize = 16;
     
@@ -110,15 +111,22 @@ var mapArray = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
             return self.currentGrid[gridY][gridX]
         }
         self.updatePosition = function () {
+            if (self.death) {
+                return;
+            }
             const oldX = self.x;
             const oldY = self.y;
             self.x += self.spdX;
             self.y += self.spdY;
-            if (self.isPositionWall(self
-                )) {
+            if (self.isPositionWall(self) && !self.isBullet) {
                 self.x = oldX;
                 self.y = oldY;
+            } else if(self.isPositionWall(self) && self.isBullet) {
+                self.toRemove = true;
             }
+        }
+        self.getDistance = function(pt){
+            return Math.sqrt(Math.pow(self.x-pt.x,2) + Math.pow(self.y-pt.y,2));
         }
         return self;
     }
@@ -134,8 +142,16 @@ var mapArray = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
         self.id = id;
         self.voteCount = 0;
         self.mouseAngle = 0;
-        self.meleeAttack = 0;
+        self.meleeAttack = false;
+        self.hp = 1;
+        self.hpMax = 1;
+        self.noOfBullets = 1;
+        self.slash = null;
+        self.night = false;
         self.groupId = null;
+        self.death = false;
+        self.meleeAttackNum = 1;
+        self.killer = false;
         self.lynchCoordinate = getLynchCoordinate();
         self.updateSpd = function() {
             if (self.pressingRight) {
@@ -156,6 +172,60 @@ var mapArray = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
         self.update = function() {
             self.updateSpd();
             self.updatePosition();
+            if (self.pressingAttack) {
+                self.shootBullet(self.mouseAngle);
+            }
+            if (self.meleeAttack) {
+                self.meleeAttacks(self.mouseAngle);
+            }
+        }
+        self.shootBullet = function(angle) {
+            if (self.noOfBullets != 0) {
+                Bullet({
+                    groupId: self.groupId,
+                    parent: self.id,
+                    angle: angle,
+                    x: self.x,
+                    y: self.y
+                });
+                self.noOfBullets -= 1;
+            }
+        }
+        self.meleeAttacks = function(angle) {
+            if (self.meleeAttackNum == 0) {
+                return;
+            }
+            self.meleeAttackNum -= 1;
+            var slash = {
+                x: self.x + Math.cos(angle/180*Math.PI) * 16,
+                y: self.y + Math.sin(angle/180*Math.PI) * 16,
+                parent: self.id
+            }
+            self.slash = slash;
+            var sockets = MAIN_SOCKET_LIST[self.groupId];
+            for (var i in sockets) {
+                var p = Player.list[sockets[i].id];
+                if(p.getDistance(slash) < 32 && slash.parent !== p.id && !p.death){
+                    p.hp -= 1;  
+                    if(p.hp <= 0){
+                        p.death = true;
+                        for (var i in sockets) {
+                            var socket = sockets[i];
+                            socket.emit('playerDeath', {
+                                deadPlayerId: p.id
+                            })
+                            if (p.killer) {
+                                socket.emit('killerDead');
+                            }
+                        }
+                        
+                    }
+                    break;
+                }
+            }
+            setTimeout(function() {
+                self.meleeAttackNum = 1;
+            }, 3000);
         }
         Player.list[id] = self;
         Player.tempList[id] = self;
@@ -189,10 +259,27 @@ var mapArray = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
         }
         initPack.player = [];
         if (Player.numberOfPlayers === 5) {
+            var randomInt = Math.floor(Math.random() * 5) + 1;
+            var tracker = 1;
+            var killerId = null;
             for(var i in MAIN_SOCKET_LIST[socket.groupId]) {
                 var SOCKET = MAIN_SOCKET_LIST[socket.groupId][i];
                 SOCKET.emit('gameStart');
                 SOCKET.inGame = true;
+                if (tracker == randomInt) {
+                    killerId = SOCKET.id;
+                    Player.list[killerId].killer = true;
+                    Player.list[killerId].hpMax = 2;
+                    Player.list[killerId].hp = 2;
+                    console.log(tracker);
+                }
+                tracker = tracker + 1;
+            }
+            for (var i in MAIN_SOCKET_LIST[socket.groupId]) {
+                var SOCKET = MAIN_SOCKET_LIST[socket.groupId][i];
+                SOCKET.emit('killerIdentity', {
+                    killerId: killerId
+                });
             }
             Player.numberOfPlayers = 0;
             Player.tempList = {}
@@ -211,10 +298,15 @@ var mapArray = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
             }
             setTimeout(() => {
                 socket.emit('gameLoaded');
-            }, 3000)
-            setTimeout(() => {
-                socket.emit('lynchTime'); 
-            }, 16000)
+            }, 5000)
+        })
+
+        socket.on('manualVote', function(data) {
+            var sockets = MAIN_SOCKET_LIST[data.groupId];
+            for (var i in sockets) {
+                var thisSocket = sockets[i];
+                thisSocket.emit('lynchTime');
+            }
         })
 
 
@@ -227,6 +319,12 @@ var mapArray = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
                 player.pressingUp = data.state;
             } else if (data.input === 'down') {
                 player.pressingDown = data.state;
+            } else if (data.input === 'attack') {
+                player.pressingAttack = data.state;
+            } else if (data.input === 'mouseAngle') {
+                player.mouseAngle = data.state;
+            } else if (data.input === 'meleeAttack') {
+                player.meleeAttack = data.state;
             }
         });
         socket.on('sendMsgToServer', function(data) {
@@ -262,6 +360,10 @@ var mapArray = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
                 pack.y = player.y;
                 pack.name = player.name;
                 pack.id = player.id;
+                pack.hp = player.hp;
+                pack.slashing = player.slashing;
+                pack.slash = player.slash;
+                pack.noOfBullets = player.noOfBullets;
                 if (packs[playerGroupId] == null) {
                     packs[playerGroupId] = []
                 }
@@ -270,6 +372,81 @@ var mapArray = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
             } 
         return packs;
     }
+
+    var Bullet = function(param){
+        var self = Entity(param);
+        self.id = Math.random();
+        self.angle = param.angle;
+        self.spdX = Math.cos(param.angle/180*Math.PI) * 10;
+        self.spdY = Math.sin(param.angle/180*Math.PI) * 10;
+        self.parent = param.parent;
+        self.timer = 0;
+        self.toRemove = false;
+        self.groupId = param.groupId;
+        self.gameStart = true;
+        self.updateGrid();
+        self.update = function(){
+            if(self.timer++ > 100) {
+                self.toRemove = true;
+            }
+            self.updatePosition();  
+            var sockets = MAIN_SOCKET_LIST[self.groupId];
+            for(var i in sockets){
+            var p = Player.list[sockets[i].id];
+            if(self.getDistance(p) < 32 && self.parent !== p.id){
+                p.hp -= 1;                
+                if(p.hp <= 0){
+                    p.death = true;
+                    for (var i in sockets) {
+                        var socket = sockets[i];
+                        socket.emit('playerDeath', {
+                            deadPlayerId: p.id
+                        })
+                        if (p.killer) {
+                            socket.emit('killerDead');
+                        }
+                    }
+                }
+                self.toRemove = true;
+                break;
+            }
+            }
+    }
+        self.getUpdatePack = function(){
+            return {
+                toRemove: self.toRemove,
+                groupId: self.groupId,
+                id:self.id,
+                x:self.x,
+                y:self.y		
+            };
+        }
+        self.isBullet = true;
+        Bullet.list[self.id] = self;
+        return self;
+    }
+    Bullet.list = {};
+    Bullet.update = function(){
+        var pack = {};
+        var packs = [];
+        for(var i in Bullet.list){
+            var bullet = Bullet.list[i];
+            var bulletGroupId = bullet.groupId;
+            bullet.update();
+            if (packs[bulletGroupId] == null) {
+                packs[bulletGroupId] = [];
+            }
+            pack = bullet.getUpdatePack();
+            packs[bulletGroupId].push(pack);
+            pack = {};
+            if(bullet.toRemove){
+                delete Bullet.list[i];
+            }
+            
+        }
+        return packs;
+    }
+
     io.sockets.on('connection', function(socket) {
         console.log('socket connection')
         var identity = Math.random();
@@ -317,6 +494,12 @@ var mapArray = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
                 socket.emit('lynchResult', {
                     lynchedId: lynchedPlayerId
                 });
+                var thisPlayer = Player.list[socket.id];
+                thisPlayer.voteCount = 0;
+            }
+            atVotingStage[groupId] = false;
+            if (lynchedPlayerId) {
+                Player.list[lynchedPlayerId].death = true;
             }
         }
         socket.on('vote', function(data) {
@@ -344,19 +527,23 @@ var mapArray = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
                 socket.emit('voteUpdate', dataPack);
             }
             if (!atVotingStage[groupNumber]) {
-                setTimeout(tallyVotes, 5000, groupNumber);
+                setTimeout(tallyVotes, 8000, groupNumber);
                 atVotingStage[groupNumber] = true;
             }
         })  
     });
 
     setInterval(() => {
-        var packs = Player.update();
+        var playerPacks = Player.update();
+        var bulletPacks = Bullet.update();
         for (var i in MAIN_SOCKET_LIST) {
             var sockets = MAIN_SOCKET_LIST[i];
             for (var i in sockets) {
                 var socket = sockets[i];
-                socket.emit('update', packs[socket.groupId]);
+                socket.emit('update', {
+                    playerPack: playerPacks[socket.groupId],
+                    bulletPack: bulletPacks[socket.groupId]
+                });
             }
         }
     }, 1000/65);
