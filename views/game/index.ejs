@@ -46,8 +46,7 @@
     var voting = false;
     var meleeCooldown = false;
     var killerDead = false;
-
-    
+ 
     //map img
     var selfId = null;
     var gameMap = function() {
@@ -153,6 +152,13 @@
         }
         self.getDistance = function(pt){
             return Math.sqrt(Math.pow(self.x-pt.x,2) + Math.pow(self.y-pt.y,2));
+        }
+        self.spectatorMode = function() {
+            self.img.src = "/ghost.png";
+            socket.emit('ghostMode', {
+                groupId: self.groupId,
+                Id: selfId
+            })
         }
         self.reducedVision = function(opacity) {
             if (self.death) {
@@ -628,6 +634,9 @@
             Player.list[i].voteCount = 0;
             if (Player.list[i].death) {
                 Player.list[i].ghost = true;
+                if (Player.list[i].id == selfId) {
+                    Player.list[i].spectatorMode();
+                }
             }
         }
         lastVote = null;
