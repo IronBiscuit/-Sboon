@@ -17,8 +17,9 @@ module.exports = function(io) {
     
 
 router.get('/', (req, res) => {
-    currentName.push(req.query.valid);
-    currentNameAgain.push(req.query.valid);
+    var name = req.query.valid;
+    currentName.push(name);
+    currentNameAgain.push(name);
     res.render('game', {
         name: currentName[0]
     })
