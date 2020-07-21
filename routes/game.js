@@ -254,6 +254,7 @@ var mapArray = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
         MAIN_SOCKET_LIST[socketGroupId].push(socket);
         Player.numberOfPlayers = Player.numberOfPlayers + 1;
         console.log(Player.numberOfPlayers);
+        console.log("groupId: " + player.groupId);
         for(var i in MAIN_SOCKET_LIST[socket.groupId]) {
         var SOCKET = MAIN_SOCKET_LIST[socket.groupId][i];
         SOCKET.emit('init', initPack);
