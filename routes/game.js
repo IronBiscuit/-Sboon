@@ -295,6 +295,7 @@ var mapArray = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
         }
 
         socket.on('gameStarted', function(data) {
+            var grpID = data.groupID;
             for (var i in Player.list) {
                 var player = Player.list[i]
                 if (player.groupId == grpID) {
