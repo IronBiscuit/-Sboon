@@ -458,8 +458,8 @@ var mapArray = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
         var identity = Math.random();
         socket.id = identity;
         socket.name = currentName[0];
-        currentName.pop();
-        console.log('Player created name is' + currentName);
+        currentName.shift();
+        console.log('Player created name is ' + currentName);
         socket.groupId = null;
         socket.inGame = false;
         Player.onConnect(socket);
