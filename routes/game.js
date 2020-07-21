@@ -6,6 +6,7 @@ const e = require('express')
 module.exports = function(io) {
     const router = express.Router()
     var currentName = [];
+    var currentNameAgain = [];
     var SOCKET_LIST = {}
     var MAIN_SOCKET_LIST = [];
     var initPack = {player: []};
@@ -17,10 +18,11 @@ module.exports = function(io) {
 
 router.get('/', (req, res) => {
     currentName.push(req.query.valid);
-    console.log('Player connected name is:' + currentName);
+    currentNameAgain.push(req.query.valid);
     res.render('game', {
-        name: currentName
+        name: currentName[0]
     })
+    currentName.shift();
 })
 
 router.get('/logout', (req, res) => {
@@ -457,9 +459,8 @@ var mapArray = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
     io.sockets.on('connection', function(socket) {
         var identity = Math.random();
         socket.id = identity;
-        socket.name = currentName[0];
-        currentName.shift();
-        console.log('Player created name is ' + currentName);
+        socket.name = currentNameAgain[0];
+        currentNameAgain.shift();
         socket.groupId = null;
         socket.inGame = false;
         Player.onConnect(socket);
