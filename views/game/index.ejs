@@ -391,8 +391,6 @@
                 if(screenHeight == 550) {
                     socket.emit('gameStarted', {
                         groupID: Player.list[selfId].groupId,
-                        name: playerName,
-                        id: Player.list[selfId].id
                     });
                     currentMap = gameMap();
                     for (var i in Player.list) {
