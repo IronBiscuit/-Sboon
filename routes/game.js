@@ -250,9 +250,10 @@ var mapArray = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
             socketGroupId = MAIN_SOCKET_LIST.length - 1;
         }
         socket.groupId = socketGroupId;
-        MAIN_SOCKET_LIST[socketGroupId].push(socket);
         player.groupId = socketGroupId;
+        MAIN_SOCKET_LIST[socketGroupId].push(socket);
         Player.numberOfPlayers = Player.numberOfPlayers + 1;
+        console.log(socket.groupId);
         for(var i in MAIN_SOCKET_LIST[socket.groupId]) {
         var SOCKET = MAIN_SOCKET_LIST[socket.groupId][i];
         SOCKET.emit('init', initPack);
@@ -271,7 +272,6 @@ var mapArray = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
                     Player.list[killerId].killer = true;
                     Player.list[killerId].hpMax = 2;
                     Player.list[killerId].hp = 2;
-                    console.log(tracker);
                 }
                 tracker = tracker + 1;
             }
@@ -393,7 +393,7 @@ var mapArray = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
             var sockets = MAIN_SOCKET_LIST[self.groupId];
             for(var i in sockets){
             var p = Player.list[sockets[i].id];
-            if(self.getDistance(p) < 32 && self.parent !== p.id){
+            if(self.getDistance(p) < 32 && self.parent !== p.id && !p.death){
                 p.hp -= 1;                
                 if(p.hp <= 0){
                     p.death = true;
@@ -448,7 +448,6 @@ var mapArray = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
     }
 
     io.sockets.on('connection', function(socket) {
-        console.log('socket connection')
         var identity = Math.random();
         socket.id = identity;
         socket.name = currentName;

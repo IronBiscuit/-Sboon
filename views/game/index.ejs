@@ -153,12 +153,14 @@
         self.getDistance = function(pt){
             return Math.sqrt(Math.pow(self.x-pt.x,2) + Math.pow(self.y-pt.y,2));
         }
+        //spectator mode
         self.spectatorMode = function() {
-            self.img.src = "/ghost.png";
+            /*self.img.src = "/ghost.png";
             socket.emit('ghostMode', {
                 groupId: self.groupId,
                 Id: selfId
-            })
+            })*/
+            console.log('I became a ghost');
         }
         self.reducedVision = function(opacity) {
             if (self.death) {
@@ -612,7 +614,9 @@
                     ctx.fillText("They never stood a chance", 230, 340);
                 } else {
                     var survivor = Player.list[selfId];
-                    survivor.playerDeath();
+                    if (!survivor.death) {
+                        survivor.playerDeath;
+                    }
                     var width = survivor.img.width * 2;
                     var height = survivor.img.height * 2;
                     ctx.drawImage(survivor.img, 345, 200, width, height);
