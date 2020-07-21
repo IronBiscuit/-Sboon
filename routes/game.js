@@ -17,6 +17,7 @@ module.exports = function(io) {
 
 router.get('/', (req, res) => {
     currentName = req.query.valid
+    console.log('Player connected name is:' + currentName);
     res.render('game', {
         name: currentName
     })
@@ -457,6 +458,7 @@ var mapArray = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
         var identity = Math.random();
         socket.id = identity;
         socket.name = currentName;
+        console.log('Player created name is' + currentName);
         socket.groupId = null;
         socket.inGame = false;
         Player.onConnect(socket);
