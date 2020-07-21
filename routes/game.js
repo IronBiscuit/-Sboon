@@ -237,6 +237,10 @@ var mapArray = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
     Player.numberOfPlayers = 0;
 
     Player.onConnect = function(socket) {
+        if (Player.numberOfPlayers >= 5) {
+            Player.onConnect(socket);
+            return;
+        }
         var player = Player(socket.name, socket.id);
         for (var i in Player.tempList) {
             initPack.player.push(Player.tempList[i]);
