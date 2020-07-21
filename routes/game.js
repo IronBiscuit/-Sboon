@@ -473,8 +473,12 @@ var mapArray = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
                     var sockets = MAIN_SOCKET_LIST[i];
                     for (var i in sockets) {
                         var backSocket = sockets[i];
-                        backSocket.groupId = backSocket.groupId - 1;
-                        Player.list[backSocket.id].groupId = Player.list[backSocket.id].groupId - 1;
+                        var newGroupId = backSocket.groupId - 1;
+                        backSocket.groupId = newGroupId;
+                        Player.list[backSocket.id].groupId = newGroupId;
+                        backSocket.emit('groupIdChange', {
+                            newGroupId: newGroupId
+                        })
                     }
                 }
             }

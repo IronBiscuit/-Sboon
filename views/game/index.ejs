@@ -298,6 +298,12 @@
         }
     })
 
+    socket.on('groupIdChange', function(data) {
+        for (var i in Player.list) {
+            Player.list[i].groupId = data.newGroupId;
+        }
+    })
+
     socket.on('update', function(data) {
         var playerData = data.playerPack;
         for (var i = 0; i < playerData.length; i++) {
