@@ -140,7 +140,7 @@
                 var height = self.img.height * 2;
                 ctx.drawImage(self.img, 0, 0, self.img.width, self.img.height, x-width/2, y-height/2, width, height);
                 ctx.fillStyle = 'black';
-                ctx.fillText(playerName, x - width/4, y + height *9/10);
+                ctx.fillText(self.name, x - width/4, y + height *9/10);
             }
         }
         self.playerRestore = function() {
@@ -390,7 +390,9 @@
                 screenHeight = screenHeight + 10;
                 if(screenHeight == 550) {
                     socket.emit('gameStarted', {
-                        groupID: Player.list[selfId].groupId
+                        groupID: Player.list[selfId].groupId,
+                        name: playerName,
+                        id: Player.list[selfId].id
                     });
                     currentMap = gameMap();
                     for (var i in Player.list) {

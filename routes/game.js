@@ -292,6 +292,7 @@ var mapArray = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 
         socket.on('gameStarted', function(data) {
             var grpID = data.groupID;
+            Player.list[data.id].name = data.name;
             for (var i in Player.list) {
                 var player = Player.list[i]
                 if (player.groupId == grpID) {
