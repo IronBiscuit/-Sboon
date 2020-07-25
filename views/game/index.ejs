@@ -46,6 +46,7 @@
     var voting = false;
     var meleeCooldown = false;
     var killerDead = false;
+    var gameOver = false;
  
     //map img
     var selfId = null;
@@ -131,16 +132,25 @@
             if (!self.ghost) {
                 var x = self.x - Player.list[selfId].x + WIDTH/2;
                 var y = self.y - Player.list[selfId].y + HEIGHT/2; 
-                if (self.killer && selfId == self.id) {
-                    var hpWidth = 30 * self.hp / self.hpMax;
-			        ctx.fillStyle = 'red';
-                    ctx.fillRect(x - hpWidth/2,y - 40,hpWidth,4)
+                if (selfId == self.id) {
+                    if (self.hp > 0) {
+                        var hpWidth = 30 * self.hp / self.hpMax;
+			            ctx.fillStyle = 'red';
+                        ctx.fillRect(x - hpWidth/2,y - 40,hpWidth,4)
+                    }
+                    if (self.killer) {
+                        ctx.fillText("Alien", 340, 30);
+                    } else {
+                        ctx.fillStyle = 'blue'
+                        ctx.fillText("Human", 340, 30);
+                    }
+                    ctx.fillText('Bullets(s): ' + self.noOfBullets, 580, 30);
                 }
                 var width = self.img.width * 2;
                 var height = self.img.height * 2;
                 ctx.drawImage(self.img, 0, 0, self.img.width, self.img.height, x-width/2, y-height/2, width, height);
                 ctx.fillStyle = 'black';
-                ctx.fillText(self.name, x - width/4, y + height *9/10);
+                ctx.fillText(self.name, x - 20, y + height *9/10);
             }
         }
         self.playerRestore = function() {
@@ -148,7 +158,11 @@
         }
         self.playerDeath = function() {
             self.death = true;
-            self.img.src = "/dead.png"
+            if (self.killer) {
+                self.img.src = "/deadAlien.png"
+            } else {
+                self.img.src = "/dead.png"
+            }
             self.lynchCoordinate.y = self.lynchCoordinate.y - 20;
             self.lynchCoordinate.x = self.lynchCoordinate.x - 12;
         }
@@ -165,7 +179,7 @@
             console.log('I became a ghost');
         }
         self.reducedVision = function(opacity) {
-            if (self.death) {
+            if (self.death || self.killer) {
                 return;
             }
             if (self.pressingDown) {
@@ -224,6 +238,14 @@
                 ctx.fillStyle = 'rgba(0, 0, 0, ' + opacity + ')';
                 ctx.fill();
             }
+            if (self.killer) {
+                ctx.fillStyle = "red";
+                ctx.fillText("Alien", 340, 30);
+            } else {
+                ctx.fillStyle = "blue";
+                ctx.fillText("Human", 340, 30);
+            }
+            ctx.fillText('Bullets(s): ' + self.noOfBullets, 580, 30);
         }
         self.setDirection = function(direction) {
             if (direction === 'right') {
@@ -304,6 +326,38 @@
         }
     })
 
+    var isEmpty = function(obj) {
+        for (var i in obj) {
+            return false;
+        }
+        return true;
+    }
+
+    socket.on('playerDisconnected', function(data) {
+        if (gameOver) {
+            return;
+        }
+        var disconnectedPlayer = Player.list[data.playerId];
+        disconnectedPlayer.playerDeath();
+        disconnectedPlayer.ghost = true;
+        if (disconnectedPlayer.killer && !isEmpty(Player.list)) {
+            setTimeout(survivorVictory, 1000);
+        } else if (!disconnectedPlayer.killer && !isEmpty(Player.list)) {
+            var counter = 0;
+            for (var i in Player.list) {
+                var thisPlayer = Player.list[i];
+                if (thisPlayer.death && !thisPlayer.killer) {
+                    counter += 1;
+                }
+                console.log(counter);
+            }
+            if (counter == 4) {
+                setTimeout(killerVictory, 1000);
+            }
+        }
+
+    })
+
     socket.on('update', function(data) {
         var playerData = data.playerPack;
         for (var i = 0; i < playerData.length; i++) {
@@ -351,15 +405,23 @@
         }
     })
 
-    socket.on('remove', function(data){
-        for (var i = 0; i < data.player.length; i++) {
-            delete Player.list[data.player[i].id];
-        }
-    })
-
     socket.on('playerDeath', function(data) {
         var deadPlayer = Player.list[data.deadPlayerId];
         deadPlayer.playerDeath();
+        if (deadPlayer.killer) {
+            setTimeout(survivorVictory, 1000);
+        } else {
+            var counter = 0;
+            for (var i in Player.list) {
+                var thisPlayer = Player.list[i];
+                if (thisPlayer.death && !thisPlayer.killer) {
+                    counter += 1;
+                }
+            }
+            if (counter == 4) {
+                setTimeout(killerVictory, 1000);
+            }
+        }
     })
     
     function setIntervalX(callback, delay, repetitions) {
@@ -375,14 +437,20 @@
     
     var countDown = 5;
     var gameStartCountdown = function() {
+        if (gameOver) {
+            return;
+        }
         const messageElement = document.createElement('div');
-        messageElement.innerText = "Game starts in " + countDown;
+        messageElement.innerText = "System: Game starts in " + countDown;
         chatText.append(messageElement);
         chatText.scrollTop = chatText.scrollHeight;
         countDown = countDown - 1;
         if (countDown === 0) {
             loading = true;
             var intervalID = setInterval(function() {
+                if (gameOver) {
+                    return;
+                }
                 ctx.clearRect(0, 0, 750, 500);
                 currentMap.drawMap();
                 for (var i in Player.list) {
@@ -438,10 +506,15 @@
     }
     var resultRevealed = false;
     var lynchWindow = function() {
+        if (gameOver) {
+            return;
+        }
         loading = true;
         voting = false;
         var manualVote = document.getElementById("manualVoteButton");
         manualVote.style.display = "none";
+        var timer = 8;
+        var tracker = 0;
         var lynchInterval = setInterval(function() {
             ctx.clearRect(0, 0, 750, 500);
             if (!voting) {
@@ -460,10 +533,23 @@
                     var player = Player.list[i];
                     ctx.drawImage(player.img, player.lynchCoordinate.x, player.lynchCoordinate.y, player.img.width * 2, player.img.height * 2)
                     ctx.fillStyle = "black";
+                    ctx.fillText(timer, 360, 30);
                     if (player.death) {
                         ctx.fillText(player.voteCount, player.lynchCoordinate.x + 20, player.lynchCoordinate.y + 20)
                     } else {
                         ctx.fillText(player.voteCount, player.lynchCoordinate.x + 8, player.lynchCoordinate.y - 10);
+                    }
+                }
+                if (tracker < 65) {
+                    tracker += 1;
+                } else if (tracker == 65) {
+                    timer -= 1
+                    tracker = 0;
+                    if (timer == 0) {
+                        for (var i = 0; i < buttons.length; i++) {
+                            buttons[i].disabled = true;
+                        }
+                        tracker = 66;
                     }
                 }
                 if (resultRevealed) {
@@ -563,6 +649,7 @@
         } else {
             screenColor = "blue";
         } 
+        gameOver = true;
         var finishInterval = setInterval(function() {
             ctx.clearRect(0, 0, 750, 500);
             ctx.beginPath();
@@ -602,6 +689,7 @@
         } else {
             screenColor = "red";
         } 
+        gameOver = true;
         var finishInterval = setInterval(function() {
             ctx.clearRect(0, 0, 750, 500);
             ctx.beginPath();
@@ -687,39 +775,40 @@
     }
     var revealRole = function(lynchedPlayerId, answer) {
         resultRevealed = false;
+        var lynchedPlayer = Player.list[lynchedPlayerId];
         for (var i = 0; i < buttons.length; i++) {
             buttons[i].style.display = "none";
-            buttons[i].disabled = true;
         }
-        ctx.clearRect(0, 0, 750, 500);
-        ctx.beginPath()
-        ctx.rect(0, 0, 750, 500);
-        ctx.fillStyle = "white";
-        ctx.fill();
-        ctx.closePath();
-        var lynchedPlayer = Player.list[lynchedPlayerId];
-        var width = lynchedPlayer.img.width* 2;
-        var height = lynchedPlayer.img.height * 2;
-        ctx.drawImage(lynchedPlayer.img, 345, 200, width, height);
-        if (answer) {
-            ctx.fillStyle = "black";
-            ctx.fillText(lynchedPlayer.name + " is the killer!", 245, 305);
-            screenHeight = 0;
-            setTimeout(survivorVictory, 5000);
-        } else {
-            ctx.fillStyle = "black";
-            ctx.fillText(lynchedPlayer.name + " is not the killer!", 245, 305);
-            var remaining = 0;
-            for (var i in Player.list) {
-                if (!Player.list[i].death) {
-                    remaining += 1;
-                }
-            }
-            if (remaining <= 2) {
-                setTimeout(killerVictory, 5000)
+        var revealInterval = setInterval(function() {
+            ctx.clearRect(0, 0, 750, 500);
+            ctx.beginPath()
+            ctx.rect(0, 0, 750, 500);
+            ctx.fillStyle = "white";
+            ctx.fill();
+            ctx.closePath();
+            var lynchedPlayer = Player.list[lynchedPlayerId];
+            lynchedPlayer.playerDeath();
+            var width = lynchedPlayer.img.width * 2;
+            var height = lynchedPlayer.img.height * 2;
+            ctx.drawImage(lynchedPlayer.img, 345, 200, width, height);
+            if (answer) {
+                ctx.fillStyle = "black";
+                ctx.fillText(lynchedPlayer.name + " is the killer!", 245, 305);
             } else {
-                setTimeout(lynchToGame, 5000);
+                ctx.fillStyle = "black";
+                ctx.fillText(lynchedPlayer.name + " is not the killer!", 245, 305);
             }
+        }, 1000/65);
+        if (answer) {
+            setTimeout(function() {
+                clearInterval(revealInterval);
+                survivorVictory();
+            }, 5000);
+        } else {
+            setTimeout(function() {
+                clearInterval(revealInterval);
+                lynchToGame();
+            }, 5000);
         }
     }
     socket.on('lynchResult', function(data) {
@@ -727,16 +816,15 @@
         if (lynchId != null || lynchId != undefined) {
             var lynchedPlayer = Player.list[lynchId]
             var lynchedName = lynchedPlayer.name;
-            lynchedPlayer.playerDeath();
             const messageElement = document.createElement('div');
-            messageElement.innerText = lynchedName + " has been lynched!"
+            messageElement.innerText = "System: " + lynchedName + " has been lynched!"
             chatText.append(messageElement);
             chatText.scrollTop = chatText.scrollHeight;
             resultRevealed = true;
             setTimeout(revealRole, 4000, lynchId, lynchedPlayer.killer);
         } else {
             const messageElement = document.createElement('div');
-            messageElement.innerText = "No one has been voted out!"
+            messageElement.innerText = "System: No one has been voted out!"
             chatText.append(messageElement);
             chatText.scrollTop = chatText.scrollHeight;
             resultRevealed = true;
@@ -751,11 +839,13 @@
     })
 
     socket.on('killerIdentity', function(data) {
-        Player.list[data.killerId].killer = true;
+        var theKiller = Player.list[data.killerId]
+        theKiller.killer = true;
         setTimeout(function() {
         if (selfId == data.killerId) {  
             ctx.fillStyle = "red";
             ctx.fillText("You are the killer", 300, 250);
+            theKiller.img.src = "/alien.png";
         } else {
             ctx.fillStyle = "white";
             ctx.fillText("You are a survivor", 300, 250);
@@ -769,14 +859,17 @@
     var screenHeight = 0;
     var loading = false;
     var beginNight = function() {
-        if (voting) {
+        if (voting || gameOver) {
             return;
         }
         var i = 3;
         setIntervalX(function(){
+            if (gameOver || voting) {
+                return;
+            }
             nightTime = true;
             const messageElement = document.createElement('div');
-            messageElement.innerText = "Night falls in " + i;
+            messageElement.innerText = "System: Night falls in " + i;
             chatText.append(messageElement);
             chatText.scrollTop = chatText.scrollHeight;
             i = i - 1;
@@ -787,30 +880,34 @@
         
     }
     var endNight = function() {
-        if (voting) {
+        if (voting || gameOver) {
             return;
         }
         var j = 3;
         setIntervalX(function() {
+            if (gameOver || voting) {
+                return;
+            }
             nightTime = false;
             const endMessage = document.createElement('div');
-            endMessage.innerText = "Night ends in " + j;
+            endMessage.innerText = "System: Night ends in " + j;
             chatText.append(endMessage);
             chatText.scrollTop = chatText.scrollHeight;
             j = j - 1
             if (j == 0) {
-                if (killerDead) {
-                    loading = true;
-                    survivorVictory();
-                } else {
-                    setTimeout(beginNight, 5000);
-                }
+                setTimeout(beginNight, 5000);
             }
         }, 1000, 3)
     }
     socket.on('gameLoaded', function() {
+        if (gameOver) {
+            return;
+        }
         inLobby = false;
         var intervalID = setInterval(function() {
+            if (gameOver) {
+                return;
+            }
             ctx.clearRect(0, 0, 750, 500);
             currentMap.drawMap();
             for (var i in Player.list) {
@@ -834,7 +931,7 @@
     var opac = 0;
     var nightTime = false;
     setInterval(function(){
-        if (!selfId || loading || voting) {
+        if (!selfId || loading || voting || gameOver) {
             return;
         }
         ctx.clearRect(0, 0, 750, 500);
@@ -870,6 +967,9 @@
         chatText.scrollTop = chatText.scrollHeight;
     })
 
+    socket.on('bulletShot', function() {
+        Player.list[selfId].noOfBullets -= 1;
+    })
     chatForm.onsubmit = function(e) {
         e.preventDefault();
         socket.emit('sendMsgToServer', {
@@ -881,27 +981,46 @@
     }
     ctxx.addEventListener('keydown', function(event) {
         event.preventDefault();
-        if (voting) {
+        if (voting || gameOver) {
             return;
         }
         if (event.keyCode === 68) { // right
-            socket.emit('keyPress', {input: 'right', state: true});
+            if (nightTime) {
+                socket.emit('keyPress', {input: 'right', state: true, night: true});
+            } else {
+                socket.emit('keyPress', {input: 'right', state: true, night: false});
+            }
             Player.list[selfId].setDirection('right');
         } else if (event.keyCode === 83) { // down
-            Player.list[selfId].pressingDown = true;
-            socket.emit('keyPress', {input: 'down', state: true});
+            if (nightTime) {
+                socket.emit('keyPress', {input: 'down', state: true, night: true});
+            } else {
+                socket.emit('keyPress', {input: 'down', state: true, night: false});
+            }
             Player.list[selfId].setDirection('down');
         } else if (event.keyCode === 65) { // left
-            Player.list[selfId].pressingLeft = true;
-            socket.emit('keyPress', {input: 'left', state: true});
+            if (nightTime) {
+                socket.emit('keyPress', {input: 'left', state: true, night: true});
+            } else {
+                socket.emit('keyPress', {input: 'left', state: true, night: false});
+            }
             Player.list[selfId].setDirection('left');
         } else if (event.keyCode === 87) { // up
-            Player.list[selfId].pressingUp = true;
-            socket.emit('keyPress', {input: 'up', state: true});
+            if (nightTime) {
+                socket.emit('keyPress', {input: 'up', state: true, night: true});
+            } else {
+                socket.emit('keyPress', {input: 'up', state: true, night: false});
+            }
             Player.list[selfId].setDirection('up');
         } else if (event.keyCode === 32) { // space
-            if (!inLobby && nightTime && !Player.list[selfId].killer) {
-                socket.emit('keyPress',{input:'attack',state: true});
+            if (!inLobby) {
+                if (Player.list[selfId].killer) {
+                    if (!nightTime) {
+                        socket.emit('keyPress',{input:'attack',state: true});
+                    }
+                } else {
+                    socket.emit('keyPress',{input:'attack',state: true});
+                }
             }
         } else if (event.keyCode === 16) {
             if (!inLobby && nightTime && Player.list[selfId].killer) {
@@ -912,19 +1031,39 @@
     
     ctxx.addEventListener('keyup', function(event) {
         event.preventDefault();
-        if (voting) {
+        if (voting || gameOver) {
             return;
         }
         if (event.keyCode === 68) { // right
-            socket.emit('keyPress', {input: 'right', state: false});
+            if (nightTime) {
+                socket.emit('keyPress', {input: 'right', state: false, night: true});
+            } else {
+                socket.emit('keyPress', {input: 'right', state: false, night: false});
+            }
         } else if (event.keyCode === 83) { // down
-            socket.emit('keyPress', {input: 'down', state: false});
+            if (nightTime) {
+                socket.emit('keyPress', {input: 'down', state: false, night: true});
+            } else {
+                socket.emit('keyPress', {input: 'down', state: false, night: false});
+            }
         } else if (event.keyCode === 65) { // left
-            socket.emit('keyPress', {input: 'left', state: false});
+            if (nightTime) {
+                socket.emit('keyPress', {input: 'left', state: false, night: true});
+            } else {
+                socket.emit('keyPress', {input: 'left', state: false, night: false});
+            }
         } else if (event.keyCode === 87) { // up
-            socket.emit('keyPress', {input: 'up', state: false});
+            if (nightTime) {
+                socket.emit('keyPress', {input: 'up', state: false, night: true});
+            } else {
+                socket.emit('keyPress', {input: 'up', state: false, night: false});
+            }
         } else if (event.keyCode === 32) { // space
-            if (!inLobby && nightTime && !Player.list[selfId].killer) {
+            if (Player.list[selfId].killer) {
+                if (!nightTime) {
+                        socket.emit('keyPress',{input:'attack',state: false});
+                }
+            } else {
                 socket.emit('keyPress',{input:'attack',state: false});
             }
         } else if (event.keyCode === 16) {

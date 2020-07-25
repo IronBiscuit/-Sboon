@@ -147,9 +147,9 @@ var mapArray = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
         self.voteCount = 0;
         self.mouseAngle = 0;
         self.meleeAttack = false;
-        self.hp = 1;
-        self.hpMax = 1;
-        self.noOfBullets = 1;
+        self.hp = 2;
+        self.hpMax = 2;
+        self.noOfBullets = 2;
         self.slash = null;
         self.night = false;
         self.groupId = null;
@@ -157,6 +157,7 @@ var mapArray = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
         self.meleeAttackNum = 1;
         self.killer = false;
         self.lynchCoordinate = getLynchCoordinate();
+        self.bulletCooldown = false;
         self.updateSpd = function() {
             if (self.pressingRight) {
                 self.spdX = self.maxSpeed;
@@ -184,7 +185,7 @@ var mapArray = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
             }
         }
         self.shootBullet = function(angle) {
-            if (self.noOfBullets != 0) {
+            if (self.noOfBullets != 0 && !self.bulletCooldown) {
                 Bullet({
                     groupId: self.groupId,
                     parent: self.id,
@@ -193,10 +194,18 @@ var mapArray = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
                     y: self.y
                 });
                 self.noOfBullets -= 1;
+                self.bulletCooldown = true;
+                var thisSocket = MAIN_SOCKET_LIST[self.groupId].find(function(currentSocket) {
+                    return currentSocket.id == self.id;
+                })
+                thisSocket.emit('bulletShot');
+                setTimeout(function() {
+                    self.bulletCooldown = false;
+                }, 2000);
             }
         }
         self.meleeAttacks = function(angle) {
-            if (self.meleeAttackNum == 0) {
+            if (self.meleeAttackNum <= 0) {
                 return;
             }
             self.meleeAttackNum -= 1;
@@ -210,7 +219,7 @@ var mapArray = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
             for (var i in sockets) {
                 var p = Player.list[sockets[i].id];
                 if(p.getDistance(slash) < 32 && slash.parent !== p.id && !p.death){
-                    p.hp -= 1;  
+                    p.hp -= 2;  
                     if(p.hp <= 0){
                         p.death = true;
                         for (var i in sockets) {
@@ -218,9 +227,6 @@ var mapArray = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
                             socket.emit('playerDeath', {
                                 deadPlayerId: p.id
                             })
-                            if (p.killer) {
-                                socket.emit('killerDead');
-                            }
                         }
                         
                     }
@@ -257,11 +263,11 @@ var mapArray = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
         } else if (Player.numberOfPlayers < 5) {
             socketGroupId = MAIN_SOCKET_LIST.length - 1;
         }
+        console.log(Player.numberOfPlayers);
         socket.groupId = socketGroupId;
         player.groupId = socketGroupId;
         MAIN_SOCKET_LIST[socketGroupId].push(socket);
         Player.numberOfPlayers = Player.numberOfPlayers + 1;
-        console.log(Player.numberOfPlayers);
         console.log("groupId: " + player.groupId);
         for(var i in MAIN_SOCKET_LIST[socket.groupId]) {
         var SOCKET = MAIN_SOCKET_LIST[socket.groupId][i];
@@ -279,8 +285,8 @@ var mapArray = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
                 if (tracker == randomInt) {
                     killerId = SOCKET.id;
                     Player.list[killerId].killer = true;
-                    Player.list[killerId].hpMax = 2;
-                    Player.list[killerId].hp = 2;
+                    Player.list[killerId].hpMax = 4;
+                    Player.list[killerId].hp = 4;
                 }
                 tracker = tracker + 1;
             }
@@ -309,17 +315,54 @@ var mapArray = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
                 socket.emit('gameLoaded');
             }, 5000)
         })
+        var tallyVotes = function(groupId) {
+            var sockets = MAIN_SOCKET_LIST[groupId];
+            var lynchedPlayerId = null;
+            var mostVotes = 0;
+            for (var i in sockets) {
+                var thisPlayer = Player.list[sockets[i].id]
+                if (thisPlayer.voteCount > mostVotes) {
+                    lynchedPlayerId = thisPlayer.id;
+                    mostVotes = thisPlayer.voteCount;
+                } else if (thisPlayer.voteCount == mostVotes && lynchedPlayerId !== null) {
+                    lynchedPlayerId = null;
+                    break;
+                }
+            }
+            for (var i in sockets) {
+                var socket = sockets[i];
+                socket.emit('lynchResult', {
+                    lynchedId: lynchedPlayerId
+                });
+                var thisPlayer = Player.list[socket.id];
+                thisPlayer.voteCount = 0;
+            }
+            atVotingStage[groupId] = false;
+            if (lynchedPlayerId) {
+                Player.list[lynchedPlayerId].death = true;
+            }
+        }
 
         socket.on('manualVote', function(data) {
-            var sockets = MAIN_SOCKET_LIST[data.groupId];
+            var groupNumber = data.groupId
+            var sockets = MAIN_SOCKET_LIST[groupNumber];
             for (var i in sockets) {
                 var thisSocket = sockets[i];
                 thisSocket.emit('lynchTime');
+            }
+            if (!atVotingStage[groupNumber]) {
+                setTimeout(tallyVotes, 9000, groupNumber);
+                atVotingStage[groupNumber] = true;
             }
         })
 
 
         socket.on('keyPress', function(data) {
+            if (data.night && player.killer) {
+                player.maxSpeed = 6;
+            } else {
+                player.maxSpeed = 4;
+            }
             if (data.input === 'left') {
                 player.pressingLeft = data.state;
             } else if (data.input === 'right') {
@@ -348,13 +391,6 @@ var mapArray = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
         })
     }
     Player.onDisconnect = function(socket) {
-        removePack.player.push(Player.list[socket.id]);
-        var sockets = MAIN_SOCKET_LIST[socket.groupId];
-        for (var i in sockets) {
-            var socketed = sockets[i]
-            socketed.emit('remove', removePack);
-        }
-        removePack.player = [];
         delete Player.list[socket.id];
         delete Player.tempList[socket.id];
     }
@@ -466,6 +502,18 @@ var mapArray = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
         Player.onConnect(socket);
         socket.on('disconnect', function(){
             const index = MAIN_SOCKET_LIST[socket.groupId].indexOf(socket);
+            if (!socket.inGame) {
+                lynchCoordinates.unshift(Player.list[socket.id].lynchCoordinate);
+                Player.numberOfPlayers = Player.numberOfPlayers - 1;
+            } else if (socket.inGame) {
+                var sockets = MAIN_SOCKET_LIST[socket.groupId];
+                for (var i in sockets) {
+                    var currentSocket = sockets[i];
+                    currentSocket.emit('playerDisconnected', {
+                        playerId: socket.id
+                    })
+                }
+            }
             MAIN_SOCKET_LIST[socket.groupId].splice(index, 1);
             if (MAIN_SOCKET_LIST[socket.groupId].length == 0) {
                 MAIN_SOCKET_LIST.splice(socket.groupId, 1);
@@ -482,39 +530,9 @@ var mapArray = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
                     }
                 }
             }
-            if (!socket.inGame) {
-                Player.numberOfPlayers = Player.numberOfPlayers - 1;
-                lynchCoordinates.unshift(Player.list[socket.id].lynchCoordinate);
-            }
             Player.onDisconnect(socket)
         });
-        var tallyVotes = function(groupId) {
-            var sockets = MAIN_SOCKET_LIST[groupId];
-            var lynchedPlayerId = null;
-            var mostVotes = 0;
-            for (var i in sockets) {
-                var thisPlayer = Player.list[sockets[i].id]
-                if (thisPlayer.voteCount > mostVotes) {
-                    lynchedPlayerId = thisPlayer.id;
-                    mostVotes = thisPlayer.voteCount;
-                } else if (thisPlayer.voteCount == mostVotes && lynchedPlayerId !== null) {
-                    lynchedPlayerId = null;
-                    break;
-                }
-            }
-            for (var i in sockets) {
-                var socket = sockets[i];
-                socket.emit('lynchResult', {
-                    lynchedId: lynchedPlayerId
-                });
-                var thisPlayer = Player.list[socket.id];
-                thisPlayer.voteCount = 0;
-            }
-            atVotingStage[groupId] = false;
-            if (lynchedPlayerId) {
-                Player.list[lynchedPlayerId].death = true;
-            }
-        }
+        
         socket.on('vote', function(data) {
             var groupNumber = data.groupID;
             var sockets = MAIN_SOCKET_LIST[groupNumber];
@@ -538,10 +556,6 @@ var mapArray = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
             for (var i in sockets) {
                 var socket = sockets[i];
                 socket.emit('voteUpdate', dataPack);
-            }
-            if (!atVotingStage[groupNumber]) {
-                setTimeout(tallyVotes, 8000, groupNumber);
-                atVotingStage[groupNumber] = true;
             }
         })  
     });
