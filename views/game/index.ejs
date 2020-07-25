@@ -154,7 +154,7 @@
                 ctx.drawImage(self.img, 0, 0, self.img.width, self.img.height, x-width/2, y-height/2, width, height);
                 ctx.fillStyle = 'black';
                 ctx.fillText(self.name, x - 20, y + height *9/10);
-                if(self.meleeAttack || self.lastAttack > 0) {
+                if((self.meleeAttack || self.lastAttack > 0) && self.killer) {
                     ctx.drawImage(self.slashingImg,
                     0,0,self.slashingImg.width,self.slashingImg.height,
                     self.slash.x - self.x + WIDTH/2-width/2,self.slash.y - self.y + HEIGHT/2-height/2,
