@@ -518,7 +518,7 @@
                 }
                 var distance = thisPlayer.getDistance(point);
                 var manualVote = document.getElementById('manualVoteButton');
-                if (distance <= 300) {
+                if (distance <= 300 && !gameOver) {
                     manualVote.style.display = "inline";
                     break;
                 } else {
@@ -677,6 +677,8 @@
             screenColor = "blue";
         } 
         gameOver = true;
+        var manual = document.getElementById('manualVoteButton');
+        manual.style.display = "none";
         var finishInterval = setInterval(function() {
             ctx.clearRect(0, 0, 750, 500);
             ctx.beginPath();
@@ -725,6 +727,8 @@
             screenColor = "red";
         } 
         gameOver = true;
+        var manual = document.getElementById('manualVoteButton');
+        manual.style.display = "none";
         var finishInterval = setInterval(function() {
             ctx.clearRect(0, 0, 750, 500);
             ctx.beginPath();
