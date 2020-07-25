@@ -16,6 +16,14 @@ const UserSchema = new mongoose.Schema({
   date: {
     type: Date,
     default: Date.now
+  },
+  wins: {
+    type: Number,
+    default: 0
+  },
+  lose: {
+    type: Number,
+    default: 0
   }
 });
 

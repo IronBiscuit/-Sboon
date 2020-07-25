@@ -1,6 +1,7 @@
 const express = require('express')
 const app = express()
 const { handleError, ErrorHandler } = require('../models/error')
+const User = require('../models/User');
 const e = require('express')
 
 module.exports = function(io) {
@@ -17,11 +18,10 @@ module.exports = function(io) {
     
 
 router.get('/', (req, res) => {
-    var name = req.query.valid;
-    currentName.push(name);
-    currentNameAgain.push(name);
+    var thisUser = req.user;
+    currentNameAgain.push(thisUser.name);
     res.render('game', {
-        name: currentName[0]
+        user: thisUser
     })
     currentName.shift();
 })
@@ -156,6 +156,7 @@ var mapArray = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
         self.death = false;
         self.meleeAttackNum = 1;
         self.killer = false;
+        self.slashingInterval = 0;
         self.lynchCoordinate = getLynchCoordinate();
         self.bulletCooldown = false;
         self.updateSpd = function() {
@@ -206,6 +207,7 @@ var mapArray = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
         }
         self.meleeAttacks = function(angle) {
             if (self.meleeAttackNum <= 0) {
+                self.meleeAttack = false;
                 return;
             }
             self.meleeAttackNum -= 1;
@@ -356,6 +358,30 @@ var mapArray = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
             }
         })
 
+        socket.on('thisGuyWon', function(data) {
+            var email = data.email;
+            User.findOne({email: email}).then(user => {
+                if (user) {
+                    user.wins += 1;
+                    user.save();
+                } else {
+                    return;
+                }
+            })
+        })
+
+        socket.on('thisGuyLost', function(data) {
+            var email = data.email;
+            User.findOne({email: email}).then(user => {
+                if (user) {
+                    user.lose += 1;
+                    user.save();
+                } else {
+                    return;
+                }
+            })
+        })
+
 
         socket.on('keyPress', function(data) {
             if (data.night && player.killer) {
@@ -406,7 +432,7 @@ var mapArray = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
                 pack.name = player.name;
                 pack.id = player.id;
                 pack.hp = player.hp;
-                pack.slashing = player.slashing;
+                pack.meleeAttack = player.meleeAttack;
                 pack.slash = player.slash;
                 pack.noOfBullets = player.noOfBullets;
                 if (packs[playerGroupId] == null) {

@@ -1,5 +1,5 @@
 <h1 class="text-center mt-4">LIE || DIE</h1>
-<p class="lead text-center mb-3">Say hi to your friends <%= name %>!</p>
+<p class="lead text-center mb-3">Say hi to your friends <%= user.name %>!</p>
 <div style="display: inline-block;">
     <canvas tabindex='1' id="ctx" width="750" height="500" style="border:1px solid #000000; transition: width .5s, height .5s, top .5s, left .5s; display: inline-block;"></canvas>
     <button type = "button" disabled name = "first" class="playerButtons" onclick="vote(this)" style="position: relative; left: 93px; top: -335px; display: none;">Vote</button>
@@ -36,8 +36,8 @@
     var chatForm = document.getElementById("chat-form");
     var chatInput = document.getElementById("chat-input");
     var buttons = document.getElementsByClassName('playerButtons');
-    var playerName = "<%= name %>";
-    ctx.font = '30px lucida';
+    var playerName = "<%= user.name %>";
+    ctx.font = '20px lucida';
     var socket = io();
     var WIDTH = 750;
     var HEIGHT = 500;
@@ -116,7 +116,7 @@
         self.hp = initPack.hp;
         self.hpMax = initPack.hpMax;
         self.noOfBullets = initPack.noOfBullets;
-        self.slashing = initPack.slashing;
+        self.meleeAttack = initPack.meleeAttack;
         self.slash = initPack.slash;
         self.killer = initPack.killer;
         self.voteCount = 0;
@@ -127,6 +127,9 @@
         self.pressingDown = false;
         self.img = new Image();
         self.img.src = "/player.png";
+        self.slashingImg = new Image();
+        self.slashingImg.src = "/slash.png"
+        self.lastAttack = 0;
         Player.list[self.id] = self;
         self.mapDraw = function() {
             if (!self.ghost) {
@@ -151,6 +154,17 @@
                 ctx.drawImage(self.img, 0, 0, self.img.width, self.img.height, x-width/2, y-height/2, width, height);
                 ctx.fillStyle = 'black';
                 ctx.fillText(self.name, x - 20, y + height *9/10);
+                if(self.meleeAttack || self.lastAttack > 0) {
+                    ctx.drawImage(self.slashingImg,
+                    0,0,self.slashingImg.width,self.slashingImg.height,
+                    self.slash.x - self.x + WIDTH/2-width/2,self.slash.y - self.y + HEIGHT/2-height/2,
+                    self.slashingImg.width/10, self.slashingImg.height/10);
+                    if (self.lastAttack == 0) {
+                        self.lastAttack = 66;
+                    } else {
+                        self.lastAttack -= 2;
+                    }
+                }
             }
         }
         self.playerRestore = function() {
@@ -273,7 +287,11 @@
         self.lobbyDraw = function() {
             var x = self.x;
             var y = self.y;
-            ctx.drawImage(self.img, x, y, self.img.width * 2, self.img.height * 2);
+            var width = self.img.width * 2;
+            var height = self.img.height * 2;
+            ctx.drawImage(self.img, 0, 0, self.img.width, self.img.height, x-width/2, y-height/2, width, height);
+            ctx.fillStyle = 'black';
+            ctx.fillText(self.name, x - width/1.3, y + height *9/10);
         }
         self.Draw = function() {
             self.lobbyDraw();
@@ -376,8 +394,8 @@
                 if (pack.noOfBullets !== undefined) {
                     p.noOfBullets = pack.noOfBullets;
                 }
-                if (pack.slashing !== undefined) {
-                    p.slashing = pack.slashing;
+                if (pack.meleeAttack !== undefined) {
+                    p.meleeAttack = pack.meleeAttack;
                 }
                 if (p.slash !== undefined) {
                     p.slash = pack.slash;
@@ -479,11 +497,17 @@
 
     // lynch system
     var manualVote = function() {
+        if (gameOver) {
+            return;
+        }
         socket.emit('manualVote', {
             groupId: Player.list[selfId].groupId
         })
     }
     var deathRadar = function() {
+        if (gameOver) {
+            return;
+        }
         var thisPlayer = Player.list[selfId]
         for (var i in Player.list) {
             var anotherPlayer = Player.list[i];
@@ -535,10 +559,13 @@
                     ctx.fillStyle = "black";
                     ctx.fillText(timer, 360, 30);
                     if (player.death) {
-                        ctx.fillText(player.voteCount, player.lynchCoordinate.x + 20, player.lynchCoordinate.y + 20)
+                        ctx.fillText(player.voteCount, player.lynchCoordinate.x + 20, player.lynchCoordinate.y + 20);
+                        ctx.fillText(player.name, player.lynchCoordinate.x + 10, player.lynchCoordinate.y - 20); 
                     } else {
                         ctx.fillText(player.voteCount, player.lynchCoordinate.x + 8, player.lynchCoordinate.y - 10);
+                        ctx.fillText(player.name, player.lynchCoordinate.x - 2, player.lynchCoordinate.y - 40); 
                     }
+
                 }
                 if (tracker < 65) {
                     tracker += 1;
@@ -667,7 +694,11 @@
                     ctx.drawImage(killer.img, 345, 200, width, height);
                     ctx.fillStyle = "black";
                     ctx.fillText("You lost!", 320, 305);
-                    ctx.fillText("Better luck next time!", 230, 340);
+                    ctx.fillText("Better luck next time!", 290, 340);
+                    var email = "<%= user.email %>";
+                    socket.emit('thisGuyLost', {
+                        email: email
+                    })
                 } else {
                     var survivor = Player.list[selfId];
                     survivor.playerRestore();
@@ -675,7 +706,11 @@
                     var height = survivor.img.height * 2;
                     ctx.drawImage(survivor.img, 345, 200, width, height);
                     ctx.fillStyle = "white";
-                    ctx.fillText("Congrats, you survived!", 245, 305);
+                    ctx.fillText("Congrats, you survived!", 290, 305);
+                    var email = "<%= user.email %>";
+                    socket.emit('thisGuyWon', {
+                        email: email
+                    })
                 }
             }
         }, 1000/60)
@@ -707,7 +742,11 @@
                     ctx.drawImage(killer.img, 345, 200, width, height);
                     ctx.fillStyle = "white";
                     ctx.fillText("Victory!", 320, 305);
-                    ctx.fillText("They never stood a chance", 230, 340);
+                    ctx.fillText("They never stood a chance", 290, 340);
+                    var email = "<%= user.email %>";
+                    socket.emit('thisGuyWon', {
+                        email: email
+                    })
                 } else {
                     var survivor = Player.list[selfId];
                     if (!survivor.death) {
@@ -717,7 +756,11 @@
                     var height = survivor.img.height * 2;
                     ctx.drawImage(survivor.img, 345, 200, width, height);
                     ctx.fillStyle = "black";
-                    ctx.fillText("The survivors lost...", 245, 305);
+                    ctx.fillText("The survivors lost...", 290, 305);
+                    var email = "<%= user.email %>";
+                    socket.emit('thisGuyLost', {
+                        email: email
+                    })
                 }
             }
         }, 1000/60)
