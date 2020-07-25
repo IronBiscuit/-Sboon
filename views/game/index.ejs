@@ -153,17 +153,18 @@
                 var height = self.img.height * 2;
                 ctx.drawImage(self.img, 0, 0, self.img.width, self.img.height, x-width/2, y-height/2, width, height);
                 ctx.fillStyle = 'black';
-                ctx.fillText(self.name, x - 20, y + height *9/10);
-                if((self.meleeAttack || self.lastAttack > 0) && self.killer) {
-                    ctx.drawImage(self.slashingImg,
-                    0,0,self.slashingImg.width,self.slashingImg.height,
-                    self.slash.x - self.x + WIDTH/2-width/2,self.slash.y - self.y + HEIGHT/2-height/2,
-                    self.slashingImg.width/10, self.slashingImg.height/10);
-                    if (self.lastAttack == 0) {
-                        self.lastAttack = 66;
-                    } else {
-                        self.lastAttack -= 2;
-                    }
+                var nameWidth = ctx.measureText(self.name).width;
+                ctx.fillText(self.name, x - (nameWidth / 2), y + height *9/10);
+                if(self.meleeAttack || self.lastAttack > 0) {
+                        ctx.drawImage(self.slashingImg,
+                        0,0,self.slashingImg.width,self.slashingImg.height,
+                        self.slash.x - Player.list[selfId].x + WIDTH/2-width/2,self.slash.y - Player.list[selfId].y + HEIGHT/2-height/2,
+                        self.slashingImg.width/10, self.slashingImg.height/10);
+                        if (self.lastAttack == 0) {
+                            self.lastAttack = 66;
+                        } else {
+                            self.lastAttack -= 2;
+                        }
                 }
             }
         }
@@ -291,7 +292,8 @@
             var height = self.img.height * 2;
             ctx.drawImage(self.img, 0, 0, self.img.width, self.img.height, x-width/2, y-height/2, width, height);
             ctx.fillStyle = 'black';
-            ctx.fillText(self.name, x - width/1.3, y + height *9/10);
+            var nameWidth = ctx.measureText(self.name).width;
+            ctx.fillText(self.name, x - (nameWidth / 2), y + height *9/10);
         }
         self.Draw = function() {
             self.lobbyDraw();
@@ -558,12 +560,13 @@
                     ctx.drawImage(player.img, player.lynchCoordinate.x, player.lynchCoordinate.y, player.img.width * 2, player.img.height * 2)
                     ctx.fillStyle = "black";
                     ctx.fillText(timer, 360, 30);
+                    var nameWidth = ctx.measureText(player.name).width;
                     if (player.death) {
                         ctx.fillText(player.voteCount, player.lynchCoordinate.x + 20, player.lynchCoordinate.y + 20);
-                        ctx.fillText(player.name, player.lynchCoordinate.x + 10, player.lynchCoordinate.y - 20); 
+                        ctx.fillText(player.name, player.lynchCoordinate.x + 22 - (nameWidth / 2), player.lynchCoordinate.y - 20); 
                     } else {
                         ctx.fillText(player.voteCount, player.lynchCoordinate.x + 8, player.lynchCoordinate.y - 10);
-                        ctx.fillText(player.name, player.lynchCoordinate.x - 2, player.lynchCoordinate.y - 40); 
+                        ctx.fillText(player.name, player.lynchCoordinate.x + 10 - (nameWidth / 2), player.lynchCoordinate.y - 40); 
                     }
 
                 }
@@ -1019,11 +1022,13 @@
     })
     chatForm.onsubmit = function(e) {
         e.preventDefault();
-        socket.emit('sendMsgToServer', {
-            msg: chatInput.value,
-            name: playerName,
-            groupId: Player.list[selfId].groupId
-        });
+        if (!Player.list[selfId].death) {
+            socket.emit('sendMsgToServer', {
+                msg: chatInput.value,
+                name: playerName,
+                groupId: Player.list[selfId].groupId
+            });
+        }
         chatInput.value = '';
     }
     ctxx.addEventListener('keydown', function(event) {
@@ -1060,7 +1065,7 @@
             }
             Player.list[selfId].setDirection('up');
         } else if (event.keyCode === 32) { // space
-            if (!inLobby) {
+            if (!inLobby && !Player.list[selfId].death) {
                 if (Player.list[selfId].killer) {
                     if (!nightTime) {
                         socket.emit('keyPress',{input:'attack',state: true});
@@ -1106,12 +1111,14 @@
                 socket.emit('keyPress', {input: 'up', state: false, night: false});
             }
         } else if (event.keyCode === 32) { // space
-            if (Player.list[selfId].killer) {
-                if (!nightTime) {
+            if (!inLobby && !Player.list[selfId].death) {
+                if (Player.list[selfId].killer) {
+                    if (!nightTime) {
                         socket.emit('keyPress',{input:'attack',state: false});
+                    }
+                } else {
+                    socket.emit('keyPress',{input:'attack',state: false});
                 }
-            } else {
-                socket.emit('keyPress',{input:'attack',state: false});
             }
         } else if (event.keyCode === 16) {
             if (!inLobby && nightTime && Player.list[selfId].killer) {

@@ -1,8 +1,113 @@
 <% var name = user.name %>
 <% var wins = user.wins %>
 <% var losses = user.lose %>
-<h1 class="mt-4">Dashboard</h1>
+<h1 class="mt-4">Dashboard</h1> 
 <p class="lead mb-3">Welcome <%= name %></p>
 <p class="lead mb-3">You have <%= wins %> wins and <%= losses %> losses</p>
+<div>
+    <div>
+        <h4>Common Instructions</h4>
+    <ol>
+        <li>The game only starts if there are 5 players</li>
+        <li>Use WASD buttons to move the character.</li>
+        <li>You start with 2 bullets and each bullet does 1 damage</li>
+        <li>Use the SPACE button to shoot a plasma bullet in the direction of your mouse (2 sec cooldown).</li>
+        <li>The Chat system is disabled if you are dead</li>
+    </ol>
+    </div>
+    <div>
+        <h4>Survivors</h4>
+    <ol>
+        <li>You start with 2 health points</li>
+        <li>Your goal is to either kill or lynch the alien!</li>
+    </ol>
+    </div>
+    <div>
+        <h4>Alien</h4>
+    <ol>
+        <li>You start with 4 health points</li>
+        <li>At night you lose the ability to shoot, but you move much faster and gain the ability to do a melee attack</li>
+        <li>Press the SHIFT button to do a melee attack (3 sec cooldown).</li>
+        <li>Your goal is to kill every single human</li>
+    </ol>
+    </div>
+</div>
 <a id="gameLink" href= "/game/?valid=<%= name %>" class="btn btn-secondary">Enter game</a>
 <a href="/game/logout" class="btn btn-secondary">Logout</a>
+<div class="popup" style="color: #fff">
+    <a onclick="myFunction()" class="btn btn-secondary">Story
+        <p class="popuptext" id="myPopup">
+            In the year 2037, humans have abandoned earth due to the novel coronavirus 37. Fortunately, they found a suitable new home planet, X Æ A-13, and are attempting to colonize it. 
+            <br> 
+            Unbeknownst to them, a hostile native alien with shapeshifting capabilities has killed and assumed the identity of one of the humans. Its goal: to prevent the colonization of mankind on its home planet by eliminating each and every human it sees. 
+            <br>
+            Unfortunately, the humans are prepared to fight the unknown. Armed with plasma guns, they are ready to take down whatever that gets in their way. 
+            <br>
+            Nights on planet X Æ A-13 are rough for the humans. Due to the lack of resources, they can only rely on a headlamp to see in the dark.
+            <br>
+            In addition, the alien's ferocious feral instincts are awakened at night. Losing its sense of reason, it is no longer able to use the plasma gun and instead gaining increased movement speed and physical strength.
+            <br>
+            The survivors, unable to tell the alien from their fellow humans, must rely on teamwork and communication to snuff out the alien.
+            <br>
+            The alien, being outnumbered, must rely on wit and cunning to survive long enough to kill the humans.
+            <br>
+            Will the alien prevail, or would the humans survive this ordeal? 
+    </a>
+</div>
+
+
+<style type="text/css">
+.popup {
+  position: relative;
+  display: inline-block;
+  cursor: pointer;
+}
+
+.popup .popuptext {
+  visibility: hidden;
+  width: 800px;
+  background-color: #555;
+  color: #fff;
+  text-align: center;
+  border-radius: 6px;
+  padding: 8px 0;
+  position: absolute;
+  z-index: 1;
+  bottom: 125%;
+  left: 50%;
+}
+
+.popup .popuptext::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  margin-left: -5px;
+  border-width: 5px;
+  border-style: solid;
+  border-color: #555 transparent transparent transparent;
+}
+
+.popup .show {
+  visibility: visible;
+  -webkit-animation: fadeIn 1s;
+  animation: fadeIn 1s
+}
+
+
+@-webkit-keyframes fadeIn {
+  from {opacity: 0;}
+  to {opacity: 1;}
+}
+
+@keyframes fadeIn {
+  from {opacity: 0;}
+}
+</style>
+<script>
+    // When the user clicks on <div>, open the popup
+    function myFunction() {
+      var popup = document.getElementById("myPopup");
+      popup.classList.toggle("show");
+    }
+</script>
