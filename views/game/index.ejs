@@ -867,10 +867,24 @@
                 survivorVictory();
             }, 5000);
         } else {
-            setTimeout(function() {
+            var remaining = 0;
+            for (var i in Player.list) {
+                var thisPlayer = Player.list[i];
+                if (thisPlayer.death) {
+                    remaining = remaining + 1;
+                }
+            }
+            if (remaining >= 4) {
+                setTimeout(function() {
+                clearInterval(revealInterval);
+                killerVictory();
+            }, 5000);
+            } else {
+                setTimeout(function() {
                 clearInterval(revealInterval);
                 lynchToGame();
             }, 5000);
+            }
         }
     }
     socket.on('lynchResult', function(data) {
