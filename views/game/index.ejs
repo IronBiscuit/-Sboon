@@ -185,14 +185,6 @@
             return Math.sqrt(Math.pow(self.x-pt.x,2) + Math.pow(self.y-pt.y,2));
         }
         //spectator mode
-        self.spectatorMode = function() {
-            /*self.img.src = "/ghost.png";
-            socket.emit('ghostMode', {
-                groupId: self.groupId,
-                Id: selfId
-            })*/
-            console.log('I became a ghost');
-        }
         self.reducedVision = function(opacity) {
             if (self.death || self.killer) {
                 return;
@@ -558,6 +550,9 @@
         var timer = 20;
         var tracker = 0;
         var lynchInterval = setInterval(function() {
+            if (gameOver) {
+                return;
+            }
             ctx.clearRect(0, 0, 750, 500);
             if (!voting) {
                 currentMap.drawMap();
@@ -680,7 +675,6 @@
         voteButton.disabled = true;
     }
     socket.on('voteUpdate', function(data) {
-        console.log(data);
         for (var i = 0; i < data.length; i++) {
             var player = Player.list[data[i].id];
             player.voteCount = data[i].voteCount;
@@ -800,9 +794,6 @@
             Player.list[i].voteCount = 0;
             if (Player.list[i].death) {
                 Player.list[i].ghost = true;
-                if (Player.list[i].id == selfId) {
-                    Player.list[i].spectatorMode();
-                }
             }
         }
         lastVote = null;
@@ -845,6 +836,8 @@
         for (var i = 0; i < buttons.length; i++) {
             buttons[i].style.display = "none";
         }
+        var lynchedPlayer = Player.list[lynchedPlayerId];
+        lynchedPlayer.playerDeath();
         var revealInterval = setInterval(function() {
             ctx.clearRect(0, 0, 750, 500);
             ctx.beginPath()
@@ -852,8 +845,6 @@
             ctx.fillStyle = "white";
             ctx.fill();
             ctx.closePath();
-            var lynchedPlayer = Player.list[lynchedPlayerId];
-            lynchedPlayer.playerDeath();
             var width = lynchedPlayer.img.width * 2;
             var height = lynchedPlayer.img.height * 2;
             ctx.drawImage(lynchedPlayer.img, 345, 200, width, height);
@@ -879,6 +870,9 @@
     }
     socket.on('lynchResult', function(data) {
         var lynchId = data.lynchedId;
+        if (gameOver) {
+            return;
+        }
         if (lynchId != null || lynchId != undefined) {
             var lynchedPlayer = Player.list[lynchId]
             var lynchedName = lynchedPlayer.name;
