@@ -367,6 +367,7 @@
         }
         var dcPlayerId = data.playerId;
         var disconnectedPlayer = Player.list[dcPlayerId];
+        const messageElement = document.createElement('div');
         messageElement.innerText = "System: " + disconnectedPlayer.name + " has disconnected!";
         chatText.append(messageElement);
         chatText.scrollTop = chatText.scrollHeight;
