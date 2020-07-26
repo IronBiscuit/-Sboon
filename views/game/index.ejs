@@ -366,6 +366,10 @@
             return;
         }
         var disconnectedPlayer = Player.list[data.playerId];
+        messageElement.innerText = "System: " + disconnectedPlayer.name + " has disconnected!";
+        chatText.append(messageElement);
+        chatText.scrollTop = chatText.scrollHeight;
+        delete Player.list[dcPlayerId];
         disconnectedPlayer.playerDeath();
         disconnectedPlayer.ghost = true;
         if (disconnectedPlayer.killer && !isEmpty(Player.list)) {
