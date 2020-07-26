@@ -365,11 +365,11 @@
         if (gameOver) {
             return;
         }
-        var disconnectedPlayer = Player.list[data.playerId];
+        var dcPlayerId = data.playerId;
+        var disconnectedPlayer = Player.list[dcPlayerId];
         messageElement.innerText = "System: " + disconnectedPlayer.name + " has disconnected!";
         chatText.append(messageElement);
         chatText.scrollTop = chatText.scrollHeight;
-        delete Player.list[dcPlayerId];
         disconnectedPlayer.playerDeath();
         disconnectedPlayer.ghost = true;
         if (disconnectedPlayer.killer && !isEmpty(Player.list)) {
