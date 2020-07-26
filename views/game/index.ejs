@@ -332,12 +332,18 @@
     Bullet.list = {};
     
     socket.on('init', function(data) {
+        var thisPlayerId = data.selfId;
         if (data.selfId && selfId == null) {
-            selfId = data.selfId;
+            selfId = thisPlayerId;
         }
         for (var i = 0; i < data.player.length; i++) {
             new Player(data.player[i]);
         }
+        const messageElement = document.createElement('div');
+        messageElement.innerText = "System: " + Player.list[thisPlayerId].name + " has joined the lobby!";
+        chatText.append(messageElement);
+        chatText.scrollTop = chatText.scrollHeight;
+
     })
 
     socket.on('groupIdChange', function(data) {
@@ -352,6 +358,16 @@
         }
         return true;
     }
+
+    socket.on('lobbyDisconnected', function(data) {
+        var dcPlayerId = data.playerId;
+        var disconnectedPlayer = Player.list[dcPlayerId];
+        const messageElement = document.createElement('div');
+        messageElement.innerText = "System: " + disconnectedPlayer.name + " has disconnected!";
+        chatText.append(messageElement);
+        chatText.scrollTop = chatText.scrollHeight;
+        delete Player.list[dcPlayerId];
+    })
 
     socket.on('playerDisconnected', function(data) {
         if (gameOver) {
@@ -539,7 +555,7 @@
         voting = false;
         var manualVote = document.getElementById("manualVoteButton");
         manualVote.style.display = "none";
-        var timer = 8;
+        var timer = 20;
         var tracker = 0;
         var lynchInterval = setInterval(function() {
             ctx.clearRect(0, 0, 750, 500);
@@ -817,7 +833,7 @@
                         nightTime = false;
                         opac = 0;
                         clearInterval(intervalID); 
-                        setTimeout(beginNight, 5000);
+                        setTimeout(beginNight, 10000);
                     }
                 }, 1000/65) 
             }

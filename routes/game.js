@@ -265,15 +265,13 @@ var mapArray = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
         } else if (Player.numberOfPlayers < 5) {
             socketGroupId = MAIN_SOCKET_LIST.length - 1;
         }
-        console.log(Player.numberOfPlayers);
         socket.groupId = socketGroupId;
         player.groupId = socketGroupId;
         MAIN_SOCKET_LIST[socketGroupId].push(socket);
         Player.numberOfPlayers = Player.numberOfPlayers + 1;
-        console.log("groupId: " + player.groupId);
         for(var i in MAIN_SOCKET_LIST[socket.groupId]) {
-        var SOCKET = MAIN_SOCKET_LIST[socket.groupId][i];
-        SOCKET.emit('init', initPack);
+            var SOCKET = MAIN_SOCKET_LIST[socket.groupId][i];
+            SOCKET.emit('init', initPack);
         }
         initPack.player = [];
         if (Player.numberOfPlayers === 5) {
@@ -353,7 +351,7 @@ var mapArray = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
                 thisSocket.emit('lynchTime');
             }
             if (!atVotingStage[groupNumber]) {
-                setTimeout(tallyVotes, 9000, groupNumber);
+                setTimeout(tallyVotes, 21000, groupNumber);
                 atVotingStage[groupNumber] = true;
             }
         })
@@ -531,6 +529,13 @@ var mapArray = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
             if (!socket.inGame) {
                 lynchCoordinates.unshift(Player.list[socket.id].lynchCoordinate);
                 Player.numberOfPlayers = Player.numberOfPlayers - 1;
+                var sockets = MAIN_SOCKET_LIST[socket.groupId];
+                for (var i in sockets) {
+                    var currentSocket = sockets[i];
+                    currentSocket.emit('lobbyDisconnected', {
+                        playerId: socket.id
+                    })
+                }
             } else if (socket.inGame) {
                 var sockets = MAIN_SOCKET_LIST[socket.groupId];
                 for (var i in sockets) {
